@@ -895,7 +895,7 @@ public final class Messages {
 
         out.add(line()
                 .append(Component.text(INDENT))
-                .append(button("Back", backTo(from, "/catalog info " + key), MUTED, "Back"))
+                .append(backOrInfo(from, key))
                 .build());
 
         return out;
@@ -1050,8 +1050,7 @@ public final class Messages {
 
         out.add(line()
                 .append(Component.text(INDENT))
-                .append(button("Back", backTo(from, "/catalog info " + project.slug()), MUTED,
-                        "Back"))
+                .append(backOrInfo(from, project.slug()))
                 .append(Component.space())
                 .append(button("All builds", allPage(project, incompatible, 1), MUTED,
                         "Every build, newest first"))
@@ -1114,8 +1113,8 @@ public final class Messages {
                     "Page " + (shown + 1))).append(Component.space());
         }
 
-        footer.append(button("Back", "/catalog versions " + project.slug()
-                + (incompatible ? " --incompatible" : ""), MUTED, "Back"));
+        footer.append(button("Newest", "/catalog versions " + project.slug()
+                + (incompatible ? " --incompatible" : ""), MUTED, "The newest release, beta and alpha"));
 
         out.add(footer.build());
 
@@ -1327,7 +1326,7 @@ public final class Messages {
         out.add(Component.empty());
         out.add(line()
                 .append(Component.text(INDENT))
-                .append(button("Back", backTo(from, "/catalog info " + key), MUTED, "Back"))
+                .append(backOrInfo(from, key))
                 .build());
 
         return out;
@@ -1373,6 +1372,15 @@ public final class Messages {
                 .append(button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
                         "Choose a build of " + row.name()))
                 .build();
+    }
+
+    /**
+     * Back to the screen this one was opened from, or the info page when the command was typed.
+     */
+    private static Component backOrInfo(String from, String key) {
+        return from == null || from.isEmpty()
+                ? button("Info", "/catalog info " + key, MUTED, "Open the info page")
+                : button("Back", backTo(from, "/catalog info " + key), MUTED, "Back");
     }
 
     /**
