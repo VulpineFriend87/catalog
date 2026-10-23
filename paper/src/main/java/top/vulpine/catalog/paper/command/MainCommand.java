@@ -327,6 +327,7 @@ public final class MainCommand {
     @RequiresPermission("command.info")
     public void versions(CommandSender sender,
                          @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
+                         @Switch("all") boolean all,
                          @Switch("incompatible") boolean incompatible,
                          @Flag("page") @Default("1") int page) {
 
@@ -348,16 +349,19 @@ public final class MainCommand {
                 }
 
                 TrackedPlugin installed = plugin.getTracking().byProjectId(project.id());
+                boolean untracked = installed == null
+                        && plugin.getLibrary().untrackedJar(project.id()) != null;
+                List<ModrinthVersion> builds = incompatible ? plugin.allVersions(project.id())
+                        : plugin.compatibleVersions(project.id());
 
-                if (incompatible) {
-                    send(sender, Messages.everyVersion(project, plugin.allVersions(project.id()),
-                            installed, plugin.gameVersion(), page));
+                if (all) {
+                    send(sender, Messages.allVersions(project, builds, installed, untracked,
+                            plugin.gameVersion(), incompatible, page));
                     return;
                 }
 
                 send(sender, Messages.versions(project, plugin.gameVersion(),
-                        newestOfEachChannel(plugin.compatibleVersions(project.id())), installed,
-                        installed == null && plugin.getLibrary().untrackedJar(project.id()) != null,
+                        newestOfEachChannel(builds), installed, untracked, incompatible,
                         screen(data)));
 
             } catch (Exception e) {

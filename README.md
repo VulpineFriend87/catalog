@@ -63,7 +63,7 @@ Everything is clickable, so you rarely need to type any command. `/catalog help`
 | `/catalog list [--updates] [--restart] [--held] [--untracked]` | All plugins managed by Catalog, and what needs updating | `catalog.command.list` |
 | `/catalog info <plugin>` | All available information about any plugin, whether installed or not | `catalog.command.info` |
 | `/catalog search <query>` | Searches Modrinth for plugins compatible with your server | `catalog.command.search` |
-| `/catalog versions <plugin> [--incompatible]` | Newest release, beta and alpha, or every build on any Minecraft version | `catalog.command.info` |
+| `/catalog versions <plugin> [--all] [--incompatible]` | Newest release, beta and alpha, `--all` for every build, `--incompatible` for any Minecraft version | `catalog.command.info` |
 | `/catalog dependencies <plugin> [version]` | What a plugin declares it needs, optionally for a specific build | `catalog.command.info` |
 | `/catalog history [--plugin <plugin>] [--author <name>] [--event <kind>]` | What Catalog has done, and who asked | `catalog.command.list` |
 | `/catalog install <slug> [version] [--incompatible]` | Install a plugin, optionally a specific build, also for another Minecraft version | `catalog.command.install` |
