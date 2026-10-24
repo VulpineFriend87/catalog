@@ -295,7 +295,7 @@ public final class MainCommand {
             send(sender, pending.size() == 1
                     ? Messages.installed(project.title(), version.versionNumber())
                     : Messages.installedWith(project.title(), version.versionNumber(),
-                            pending.size() - 1));
+                            needed.stream().map(one -> one.project().title()).toList()));
 
         } catch (Exception e) {
             send(sender, Messages.failed(rootMessage(e)));

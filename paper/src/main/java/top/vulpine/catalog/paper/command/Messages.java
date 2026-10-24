@@ -1981,15 +1981,29 @@ public final class Messages {
                 .build();
     }
 
-    public static Component installedWith(String name, String version, int dependencies) {
-        return line()
-                .append(Component.text(name + " " + version, TEXT))
-                .append(Component.text(" and ", MUTED))
-                .append(Component.text(dependencies, TEXT))
-                .append(Component.text(dependencies == 1 ? " dependency installed, loads on restart"
-                        : " dependencies installed, load on restart", MUTED))
-                .build();
+    /**
+     * @param dependencies the names of the plugins installed with it
+     */
+    public static Component installedWith(String name, String version, List<String> dependencies) {
+
+        TextComponent.Builder out = line().append(Component.text(name + " " + version, TEXT));
+        int named = Math.min(dependencies.size(), NAMED);
+
+        for (int i = 0; i < named; i++) {
+            boolean last = i == named - 1 && dependencies.size() <= NAMED;
+            out.append(Component.text(last ? " and " : ", ", MUTED))
+                    .append(Component.text(dependencies.get(i), TEXT));
+        }
+
+        if (dependencies.size() > NAMED) {
+            out.append(Component.text(" and " + (dependencies.size() - NAMED) + " more", MUTED));
+        }
+
+        return out.append(Component.text(" installed, load on restart", MUTED)).build();
     }
+
+    /** How many installed dependencies are named before the rest are counted. */
+    private static final int NAMED = 3;
 
     public static Component installed(String name, String version) {
         return line()
