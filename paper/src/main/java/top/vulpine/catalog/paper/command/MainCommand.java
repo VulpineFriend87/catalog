@@ -824,11 +824,14 @@ public final class MainCommand {
                     }
                 }
 
+                plugin.noticeLoaded();
+                boolean loaded = !tracked.pendingLoad();
+
                 TrashBin.Result result = plugin.uninstall(tracked, sender.getName());
 
                 redraw(sender, screen(data));
-                send(sender, Messages.removed(name, result == null || result.deleted(),
-                        result == null ? null : result.entry(), screen(data)));
+                send(sender, Messages.removed(name, loaded, result == null ? null : result.entry(),
+                        screen(data)));
 
             } catch (Exception e) {
                 send(sender, Messages.failed(rootMessage(e)));

@@ -1998,12 +1998,15 @@ public final class Messages {
                 .build();
     }
 
-    public static Component removed(String name, boolean deleted, TrashEntry entry, String from) {
+    /**
+     * @param loaded false for a fresh install the server has not loaded yet
+     */
+    public static Component removed(String name, boolean loaded, TrashEntry entry, String from) {
 
         TextComponent.Builder out = line()
                 .append(Component.text(name, TEXT))
-                .append(Component.text(deleted ? " moved to trash, unloads on restart"
-                        : " moved to trash, the jar stays until restart", MUTED));
+                .append(Component.text(loaded ? " moved to trash, unloads on restart" : " moved to trash",
+                        MUTED));
 
         if (entry != null) {
             out.append(Component.space()).append(button("Undo", restoreCommand(entry, from), BRAND,
