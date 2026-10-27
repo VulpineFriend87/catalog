@@ -11,6 +11,7 @@ import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
@@ -599,7 +600,7 @@ public final class Messages {
                 .append(Component.text(" followers", MUTED))
                 .build());
 
-        out.add(field("Loaders", loaders(view)));
+        out.add(field("Minecraft", minecraft(view)));
 
         if (project.categories() != null && !project.categories().isEmpty()) {
             out.add(field("Tags", Component.text(String.join(", ", project.categories()), MUTED)));
@@ -721,6 +722,21 @@ public final class Messages {
         return Component.text("by ", MUTED)
                 .append(Component.text(view.author(), TEXT))
                 .append(Component.text(" · ", MUTED));
+    }
+
+    /**
+     * The versions of the build this page offers, or the whole project's in grey when no build runs
+     * here. The hover lists the loaders.
+     */
+    private static Component minecraft(ProjectView view) {
+
+        ModrinthVersion offered = offered(view);
+
+        String versions = view.gameVersions().describe(offered != null
+                ? offered.gameVersions() : view.project().gameVersions());
+
+        return Component.text(versions, offered != null ? TEXT : MUTED)
+                .hoverEvent(HoverEvent.showText(Component.text("Loaders  ", MUTED).append(loaders(view))));
     }
 
     private static Component loaders(ProjectView view) {
@@ -1028,6 +1044,7 @@ public final class Messages {
      * @param incompatible whether builds for other Minecraft versions are included
      */
     public static List<Component> versions(ModrinthProject project, String gameVersion,
+                                           GameVersions names,
                                            Map<ReleaseChannel, ModrinthVersion> newest,
                                            TrackedPlugin installed, boolean untracked,
                                            boolean incompatible, String from) {
@@ -1055,7 +1072,8 @@ public final class Messages {
             ModrinthVersion version = newest.get(channel);
 
             if (version != null) {
-                out.add(versionRow(project, version, true, installed, untracked, gameVersion, from));
+                out.add(versionRow(project, version, true, installed, untracked, gameVersion, names,
+                        from));
             }
         }
 
@@ -1080,7 +1098,8 @@ public final class Messages {
      */
     public static List<Component> allVersions(ModrinthProject project, List<ModrinthVersion> versions,
                                               TrackedPlugin installed, boolean untracked,
-                                              String gameVersion, boolean incompatible, int page) {
+                                              String gameVersion, GameVersions names,
+                                              boolean incompatible, int page) {
 
         int pages = Math.max((versions.size() + EVERY - 1) / EVERY, 1);
         int shown = Math.min(Math.max(page, 1), pages);
@@ -1106,7 +1125,7 @@ public final class Messages {
         }
 
         for (ModrinthVersion version : versions.subList(first, Math.min(first + EVERY, versions.size()))) {
-            out.add(versionRow(project, version, false, installed, untracked, gameVersion, null));
+            out.add(versionRow(project, version, false, installed, untracked, gameVersion, names, null));
         }
 
         out.add(Component.empty());
@@ -1147,7 +1166,8 @@ public final class Messages {
      */
     private static Component versionRow(ModrinthProject project, ModrinthVersion version,
                                         boolean channelFirst, TrackedPlugin installed,
-                                        boolean untracked, String gameVersion, String from) {
+                                        boolean untracked, String gameVersion, GameVersions names,
+                                        String from) {
 
         boolean current = installed != null && version.id().equals(installed.versionId());
         boolean staged = installed != null && version.id().equals(installed.stagedVersionId())
@@ -1161,8 +1181,7 @@ public final class Messages {
                 .append(Component.text(ago(version.datePublished()), TEXT))
                 .append(Component.newline())
                 .append(Component.text("for  ", MUTED))
-                .append(Component.text(version.gameVersions() == null ? "unknown"
-                        : String.join(", ", version.gameVersions()), TEXT));
+                .append(Component.text(names.describe(version.gameVersions()), TEXT));
 
         Component hover = info
                 .append(Component.newline())

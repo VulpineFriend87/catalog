@@ -20,6 +20,7 @@ import top.vulpine.catalog.history.HistoryEntry;
 import top.vulpine.catalog.install.Downloader;
 import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.install.InstallException;
+import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.ModrinthClient;
 import top.vulpine.catalog.modrinth.Projects;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
@@ -86,6 +87,9 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
     private Config configuration;
     private FoliaLib foliaLib;
     private ModrinthClient modrinth;
+
+    /** Every Minecraft version Modrinth knows, loaded the first time it is needed. */
+    private volatile GameVersions gameVersions;
     private TrackingStore tracking;
     private IgnoreList ignored;
     private Downloader downloader;
@@ -633,6 +637,25 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
 
     public List<ModrinthVersion> allVersions(String idOrSlug) {
         return projects.allVersions(idOrSlug);
+    }
+
+    /**
+     * Blocks on Modrinth the first time, so it must be called off the main thread.
+     *
+     * @return what writes Minecraft versions the way Modrinth shows them
+     */
+    public GameVersions gameVersions() {
+
+        if (gameVersions == null) {
+            try {
+                gameVersions = new GameVersions(modrinth.gameVersions().join());
+            } catch (Exception e) {
+                // Shown as declared until Modrinth answers.
+                return new GameVersions(List.of());
+            }
+        }
+
+        return gameVersions;
     }
 
     private void saveTracking() {

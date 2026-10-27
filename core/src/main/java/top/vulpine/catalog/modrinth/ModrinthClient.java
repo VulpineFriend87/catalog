@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Builder;
 import lombok.NonNull;
 import top.vulpine.catalog.modrinth.http.ApiTransport;
+import top.vulpine.catalog.modrinth.model.GameVersionTag;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
@@ -41,6 +42,8 @@ public final class ModrinthClient implements AutoCloseable {
     private static final Type PROJECT_LIST = new TypeToken<List<ModrinthProject>>() {}.getType();
 
     private static final Type MEMBER_LIST = new TypeToken<List<TeamMember>>() {}.getType();
+
+    private static final Type GAME_VERSION_LIST = new TypeToken<List<GameVersionTag>>() {}.getType();
 
     private final ApiTransport transport;
 
@@ -170,6 +173,15 @@ public final class ModrinthClient implements AutoCloseable {
         appendArrayParam(query, "game_versions", gameVersions);
 
         return transport.get("/project/" + encode(idOrSlug) + "/version" + query, VERSION_LIST);
+    }
+
+    /**
+     * Lists every Minecraft version Modrinth knows.
+     *
+     * @return a future of the versions, newest first
+     */
+    public CompletableFuture<List<GameVersionTag>> gameVersions() {
+        return transport.get("/tag/game_version", GAME_VERSION_LIST);
     }
 
     /**

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Singular;
 import lombok.experimental.Accessors;
 import top.vulpine.catalog.jar.model.InstalledJar;
+import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
@@ -50,6 +51,9 @@ public final class ProjectView {
     /** The loaders this server can use. */
     @Singular
     private final List<String> platformLoaders;
+
+    /** Writes Minecraft versions as ranges. */
+    private final GameVersions gameVersions;
 
     /** Required dependencies. */
     @Singular

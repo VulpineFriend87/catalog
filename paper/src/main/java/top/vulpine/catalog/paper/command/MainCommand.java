@@ -358,11 +358,11 @@ public final class MainCommand {
 
                 if (all) {
                     send(sender, Messages.allVersions(project, builds, installed, untracked,
-                            plugin.gameVersion(), incompatible, page));
+                            plugin.gameVersion(), plugin.gameVersions(), incompatible, page));
                     return;
                 }
 
-                send(sender, Messages.versions(project, plugin.gameVersion(),
+                send(sender, Messages.versions(project, plugin.gameVersion(), plugin.gameVersions(),
                         newestOfEachChannel(builds), installed, untracked, incompatible,
                         screen(data)));
 
@@ -1457,7 +1457,8 @@ public final class MainCommand {
                     .untracked(tracked == null ? plugin.getLibrary().untrackedJar(project.id()) : null)
                     .self(plugin.isSelf(tracked))
                     .updateAvailable(isNewer(latest, tracked))
-                    .platformLoaders(plugin.platformLoaders());
+                    .platformLoaders(plugin.platformLoaders())
+                    .gameVersions(plugin.gameVersions());
 
             for (ProjectView.Requirement requirement : requirements(latest)) {
                 view.requirement(requirement);
