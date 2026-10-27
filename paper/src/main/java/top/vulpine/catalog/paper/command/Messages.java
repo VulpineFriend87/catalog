@@ -858,7 +858,7 @@ public final class Messages {
                     "Show dependencies"));
         }
 
-        row.add(button("Settings", "/catalog settings " + key, MUTED,
+        row.add(button("Settings", from("/catalog settings " + key, here), MUTED,
                 "Open the settings page"));
 
         row.add(view.self()
@@ -884,7 +884,7 @@ public final class Messages {
     public static List<Component> settings(TrackedPlugin plugin, int defaultSoak, String from) {
 
         String key = key(plugin);
-        String here = ClickContext.SETTINGS + key;
+        String here = Trail.within(ClickContext.SETTINGS + key, from);
 
         List<Component> out = new ArrayList<>();
 
@@ -1083,7 +1083,7 @@ public final class Messages {
                 .append(Component.text(INDENT))
                 .append(backOrInfo(from, project.slug()))
                 .append(Component.space())
-                .append(button("All builds", allPage(project, incompatible, 1), MUTED,
+                .append(button("All builds", from(allPage(project, incompatible, 1), from), MUTED,
                         "Every build, newest first"))
                 .build());
 
@@ -1095,11 +1095,12 @@ public final class Messages {
      *
      * @param untracked    whether the project's jar is in the plugins folder but untracked
      * @param incompatible whether builds for other Minecraft versions are included
+     * @param from         the screen the newest builds were opened from
      */
     public static List<Component> allVersions(ModrinthProject project, List<ModrinthVersion> versions,
                                               TrackedPlugin installed, boolean untracked,
                                               String gameVersion, GameVersions names,
-                                              boolean incompatible, int page) {
+                                              boolean incompatible, int page, String from) {
 
         int pages = Math.max((versions.size() + EVERY - 1) / EVERY, 1);
         int shown = Math.min(Math.max(page, 1), pages);
@@ -1125,7 +1126,7 @@ public final class Messages {
         }
 
         for (ModrinthVersion version : versions.subList(first, Math.min(first + EVERY, versions.size()))) {
-            out.add(versionRow(project, version, false, installed, untracked, gameVersion, names, null));
+            out.add(versionRow(project, version, false, installed, untracked, gameVersion, names, from));
         }
 
         out.add(Component.empty());
@@ -1136,17 +1137,17 @@ public final class Messages {
                 .append(Component.text(" of " + pages + "  ", MUTED));
 
         if (shown > 1) {
-            footer.append(button("Newer", allPage(project, incompatible, shown - 1), MUTED,
+            footer.append(button("Newer", from(allPage(project, incompatible, shown - 1), from), MUTED,
                     "Page " + (shown - 1))).append(Component.space());
         }
 
         if (shown < pages) {
-            footer.append(button("Older", allPage(project, incompatible, shown + 1), MUTED,
+            footer.append(button("Older", from(allPage(project, incompatible, shown + 1), from), MUTED,
                     "Page " + (shown + 1))).append(Component.space());
         }
 
-        footer.append(button("Newest", "/catalog versions " + project.slug()
-                + (incompatible ? " --incompatible" : ""), MUTED, "The newest release, beta and alpha"));
+        footer.append(button("Newest", from("/catalog versions " + project.slug()
+                + (incompatible ? " --incompatible" : ""), from), MUTED, "The newest release, beta and alpha"));
 
         out.add(footer.build());
 
@@ -1321,7 +1322,7 @@ public final class Messages {
                                                List<DependencyView> rows, String from) {
 
         String key = project.slug();
-        String here = ClickContext.dependencies(key, version.id());
+        String here = Trail.within(ClickContext.dependencies(key, version.id()), from);
 
         List<Component> out = new ArrayList<>();
 
@@ -1421,46 +1422,59 @@ public final class Messages {
     }
 
     /**
-     * The command that reopens the screen something was launched from.
+     * The command that reopens the screen something was launched from, with its own trail.
      *
-     * @param from     the screen token a payload carried, or null when there was none
+     * @param from     the trail a payload carried, or null when there was none
      * @param fallback where to go when nothing was carried
      */
     private static String backTo(String from, String fallback) {
 
-        if (from == null || from.isEmpty()) {
+        String screen = Trail.current(from);
+        String command = screen == null || screen.isEmpty() ? null : reopen(screen);
+
+        if (command == null) {
             return fallback;
         }
 
-        Set<ListFilter> filters = ListFilter.parse(from);
+        // A confirmation reopened from itself is redrawn, never confirmed.
+        return from(command, screen.startsWith(ClickContext.CHANGE) ? from : Trail.parent(from));
+    }
+
+    /**
+     * @param screen a screen token
+     * @return the command that opens it, or null when it is not a screen that can be reopened
+     */
+    private static String reopen(String screen) {
+
+        Set<ListFilter> filters = ListFilter.parse(screen);
 
         if (filters != null) {
             return "/catalog list" + ListFilter.switches(filters);
         }
 
-        if (from.equals(ClickContext.TRASH)) {
+        if (screen.equals(ClickContext.TRASH)) {
             return "/catalog trash";
         }
 
-        if (from.startsWith(ClickContext.INFO)) {
-            return "/catalog info " + from.substring(ClickContext.INFO.length());
+        if (screen.startsWith(ClickContext.INFO)) {
+            return "/catalog info " + screen.substring(ClickContext.INFO.length());
         }
 
-        if (from.startsWith(ClickContext.SETTINGS)) {
-            return "/catalog settings " + from.substring(ClickContext.SETTINGS.length());
+        if (screen.startsWith(ClickContext.SETTINGS)) {
+            return "/catalog settings " + screen.substring(ClickContext.SETTINGS.length());
         }
 
-        if (from.startsWith(ClickContext.DEPENDENCIES)) {
-            String[] about = ClickContext.dependenciesOf(from);
+        if (screen.startsWith(ClickContext.DEPENDENCIES)) {
+            String[] about = ClickContext.dependenciesOf(screen);
             return "/catalog dependencies " + about[0] + (about[1] == null ? "" : " " + about[1]);
         }
 
-        if (from.startsWith(ClickContext.CHANGE)) {
-            String[] change = ClickContext.changeOf(from);
+        if (screen.startsWith(ClickContext.CHANGE)) {
+            String[] change = ClickContext.changeOf(screen);
             return "/catalog " + change[0] + " " + change[1] + (change[2] == null ? "" : " " + change[2]);
         }
 
-        return fallback;
+        return null;
     }
 
     private static String back(String from) {

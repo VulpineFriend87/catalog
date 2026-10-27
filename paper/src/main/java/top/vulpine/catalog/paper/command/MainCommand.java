@@ -316,7 +316,7 @@ public final class MainCommand {
      */
     private static boolean redrawing(String data, String here) {
         Press press = Press.of(data);
-        return press != null && !press.confirmed() && here.equals(press.screen());
+        return press != null && !press.confirmed() && here.equals(Trail.current(press.screen()));
     }
 
     private static boolean alone(String data) {
@@ -358,7 +358,8 @@ public final class MainCommand {
 
                 if (all) {
                     send(sender, Messages.allVersions(project, builds, installed, untracked,
-                            plugin.gameVersion(), plugin.gameVersions(), incompatible, page));
+                            plugin.gameVersion(), plugin.gameVersions(), incompatible, page,
+                            screen(data)));
                     return;
                 }
 
@@ -908,9 +909,10 @@ public final class MainCommand {
 
         Press asked = Press.of(data);
 
-        // Its buttons lead to the plugin's page, not back here.
-        if (asked != null && here.equals(asked.screen())) {
-            asked = Press.on(ClickContext.INFO + project.slug());
+        // Its buttons lead to where it was asked from, not back here.
+        if (asked != null && here.equals(Trail.current(asked.screen()))) {
+            String parent = Trail.parent(asked.screen());
+            asked = Press.on(parent != null ? parent : ClickContext.INFO + project.slug());
         }
 
         String from = installed == null ? null : installed.versionNumber();
@@ -918,7 +920,7 @@ public final class MainCommand {
                 ? installed.stagedVersionNumber() : null;
 
         send(sender, Messages.change(change, project.title(), project.slug(), from, replaces, version,
-                notFor, needs, asked, here, command));
+                notFor, needs, asked, Trail.within(here, asked == null ? null : asked.screen()), command));
     }
 
     /**
@@ -1283,30 +1285,33 @@ public final class MainCommand {
     // --- shared ------------------------------------------------------------------------
 
     /**
-     * Draws the screen the button was on again, and then states the action taken.ì
+     * Draws the screen the button was on again, and then states the action taken.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
-     * @param data what the button said it was on, or null
+     * @param data the trail of the screen the button was on, or null
      */
     private void redraw(CommandSender sender, String data) {
 
-        if (data == null) {
+        String screen = Trail.current(data);
+        String from = Trail.parent(data);
+
+        if (screen == null) {
             return;
         }
 
-        Set<ListFilter> filters = ListFilter.parse(data);
+        Set<ListFilter> filters = ListFilter.parse(screen);
 
         if (filters != null) {
             showList(sender, true, filters);
-        } else if (data.equals(ClickContext.TRASH)) {
+        } else if (screen.equals(ClickContext.TRASH)) {
             showTrash(sender, 1);
-        } else if (data.startsWith(ClickContext.DEPENDENCIES)) {
-            String[] about = ClickContext.dependenciesOf(data);
-            showDependencies(sender, about[0], about[1], null);
-        } else if (data.startsWith(ClickContext.CHANGE)) {
+        } else if (screen.startsWith(ClickContext.DEPENDENCIES)) {
+            String[] about = ClickContext.dependenciesOf(screen);
+            showDependencies(sender, about[0], about[1], from);
+        } else if (screen.startsWith(ClickContext.CHANGE)) {
 
-            String[] change = ClickContext.changeOf(data);
+            String[] change = ClickContext.changeOf(screen);
 
             if (!change[0].equals("update")) {
                 runInstall(sender, change[1], change[2], true, data);
@@ -1318,14 +1323,14 @@ public final class MainCommand {
             if (tracked != null) {
                 runUpdate(sender, tracked, data);
             }
-        } else if (data.startsWith(ClickContext.INFO)) {
-            showProject(sender, data.substring(ClickContext.INFO.length()));
-        } else if (data.startsWith(ClickContext.SETTINGS)) {
+        } else if (screen.startsWith(ClickContext.INFO)) {
+            showProject(sender, screen.substring(ClickContext.INFO.length()));
+        } else if (screen.startsWith(ClickContext.SETTINGS)) {
 
-            TrackedPlugin tracked = resolve(data.substring(ClickContext.SETTINGS.length()));
+            TrackedPlugin tracked = resolve(screen.substring(ClickContext.SETTINGS.length()));
 
             if (tracked != null) {
-                showSettings(sender, tracked, null);
+                showSettings(sender, tracked, from);
             }
         }
     }
