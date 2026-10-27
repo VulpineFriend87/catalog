@@ -643,7 +643,7 @@ public final class MainCommand {
 
     @Subcommand("history")
     @Description("What Catalog has done")
-    @RequiresPermission("command.list")
+    @RequiresPermission("command.history")
     public void history(CommandSender sender,
                         @Optional @Flag(value = "plugin", shorthand = 'l')
                         @SuggestWith(Suggestions.Logged.class) String which,

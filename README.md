@@ -65,7 +65,7 @@ Everything is clickable, so you rarely need to type any command. `/catalog help`
 | `/catalog search <query>` | Searches Modrinth for plugins compatible with your server | `catalog.command.search` |
 | `/catalog versions <plugin> [--all] [--incompatible]` | Newest release, beta and alpha, `--all` for every build, `--incompatible` for any Minecraft version | `catalog.command.info` |
 | `/catalog dependencies <plugin> [version]` | What a plugin declares it needs, optionally for a specific build | `catalog.command.info` |
-| `/catalog history [--plugin <plugin>] [--author <name>] [--event <kind>]` | What Catalog has done, and who asked | `catalog.command.list` |
+| `/catalog history [--plugin <plugin>] [--author <name>] [--event <kind>]` | What Catalog has done, and who asked | `catalog.command.history` |
 | `/catalog install <slug> [version] [--incompatible]` | Install a plugin, optionally a specific build, also for another Minecraft version | `catalog.command.install` |
 | `/catalog update <plugin\|all>` | Download updates, apply them on next restart | `catalog.command.update` |
 | `/catalog cancel <plugin>` | Drop a downloaded update | `catalog.command.update` |

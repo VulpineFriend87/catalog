@@ -65,7 +65,8 @@ bukkit {
     foliaSupported = true
 
     val commands = linkedMapOf(
-        "list" to "Lists managed plugins and the history.",
+        "list" to "Lists managed plugins.",
+        "history" to "Shows what Catalog has done.",
         "info" to "Shows a plugin's details, versions and dependencies.",
         "search" to "Searches Modrinth.",
         "install" to "Installs plugins.",

@@ -19,6 +19,7 @@ class CommandPermissionsTest {
     void subcommandNode() {
         assertEquals("command.install", PERMISSIONS.nodeFor("/catalog install luckperms"));
         assertEquals("command.list", PERMISSIONS.nodeFor("/catalog list --updates"));
+        assertEquals("command.history", PERMISSIONS.nodeFor("/catalog history --event failed"));
     }
 
     @Test
