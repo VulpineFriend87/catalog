@@ -9,7 +9,7 @@ subprojects {
     apply(plugin = "java-library")
 
     group = "top.vulpine"
-    version = "0.11.2"
+    version = "0.12.0"
 
     repositories {
         mavenLocal()
