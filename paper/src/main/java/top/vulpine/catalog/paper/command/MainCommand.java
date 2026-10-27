@@ -1298,7 +1298,7 @@ public final class MainCommand {
         Set<ListFilter> filters = ListFilter.parse(data);
 
         if (filters != null) {
-            showList(sender, false, filters);
+            showList(sender, true, filters);
         } else if (data.equals(ClickContext.TRASH)) {
             showTrash(sender, 1);
         } else if (data.startsWith(ClickContext.DEPENDENCIES)) {
@@ -1390,8 +1390,7 @@ public final class MainCommand {
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
-     * @param refresh whether to ask Modrinth again first, which is wasted after an action that
-     *                already knows what changed
+     * @param refresh whether to ask Modrinth again first
      */
     private void showList(CommandSender sender, boolean refresh, Set<ListFilter> filters) {
 

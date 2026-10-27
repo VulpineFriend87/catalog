@@ -338,7 +338,8 @@ public final class Updates {
     }
 
     /**
-     * The updates still worth offering: what the last check found, minus fresh installs not loaded yet.
+     * The updates still worth offering: what the last check found, measured against the plugins as
+     * they are now, minus fresh installs not loaded yet.
      *
      * @return the open update candidates
      */
@@ -347,9 +348,20 @@ public final class Updates {
         List<UpdateCandidate> out = new ArrayList<>();
 
         for (UpdateCandidate candidate : lastCheck) {
-            if (!candidate.plugin().pendingLoad()) {
-                out.add(candidate);
+
+            // Staged, removed or switched since the check.
+            TrackedPlugin current = tracking.byProjectId(candidate.plugin().projectId());
+
+            if (current == null || current.pendingLoad()
+                    || !UpdateChecker.isNewer(current, candidate.version())) {
+                continue;
             }
+
+            out.add(UpdateCandidate.builder()
+                    .plugin(current)
+                    .version(candidate.version())
+                    .declaresPlatform(candidate.declaresPlatform())
+                    .build());
         }
 
         return out;
