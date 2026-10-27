@@ -3,7 +3,6 @@ package top.vulpine.catalog.paper.command;
 import com.tcoded.folialib.wrapper.task.WrappedTask;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Description;
@@ -58,6 +57,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Command({"catalog", "ctlg", "cata", "ctl", "clg"})
 public final class MainCommand {
 
+    /** The permission each subcommand needs, which decides the buttons a viewer sees. */
+    public static final CommandPermissions PERMISSIONS = CommandPermissions.of(MainCommand.class);
+
     /** How long a removal stays confirmable before it has to be asked for again. */
     private static final Duration CONFIRM_WINDOW = Duration.ofSeconds(30);
 
@@ -86,7 +88,7 @@ public final class MainCommand {
     }
 
     @Description("Information about Catalog")
-    @RequiresPermission("command.about")
+    @RequiresPermission(CommandPermissions.ANY)
     public void about(CommandSender sender) {
 
         List<String> authors = plugin.getDescription().getAuthors();
@@ -97,9 +99,9 @@ public final class MainCommand {
 
     @Subcommand("help")
     @Description("Every command")
-    @RequiresPermission("command.help")
+    @RequiresPermission(CommandPermissions.ANY)
     public void help(CommandSender sender) {
-        send(sender, Messages.help());
+        send(sender, Messages.help(command -> PERMISSIONS.allows(sender, command)));
     }
 
     /**
@@ -1711,23 +1713,17 @@ public final class MainCommand {
         sender.sendMessage(Component.empty());
 
         for (Component line : lines) {
-            sender.sendMessage(shown(sender, line));
+
+            Component shown = PERMISSIONS.shown(sender, line);
+
+            if (shown != null) {
+                sender.sendMessage(shown);
+            }
         }
     }
 
     private static void send(CommandSender sender, Component line) {
-        sender.sendMessage(Component.empty());
-        sender.sendMessage(shown(sender, line));
-    }
-
-    /**
-     * A screen as this sender can use it.
-     *
-     * <p>Console, command blocks and RCON cannot click or hover, so a button there is a label with
-     * no way to act on it and no way to find out what it would have run.</p>
-     */
-    private static Component shown(CommandSender sender, Component line) {
-        return sender instanceof Player ? line : Messages.typed(line);
+        send(sender, List.of(line));
     }
 
     /**

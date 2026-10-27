@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.EnableCheck;
+import top.vulpine.catalog.paper.command.MainCommand;
 import top.vulpine.catalog.paper.command.Messages;
 import top.vulpine.catalog.paper.command.Notice;
 import top.vulpine.catalog.paper.util.PermissionChecker;
@@ -95,7 +96,12 @@ public final class JoinNotifier implements Listener {
         player.sendMessage(Component.empty());
 
         for (Component line : Messages.notice(notices, hasAvailable(notices))) {
-            player.sendMessage(line);
+
+            Component shown = MainCommand.PERMISSIONS.shown(player, line);
+
+            if (shown != null) {
+                player.sendMessage(shown);
+            }
         }
 
         heardBefore.addAll(news);

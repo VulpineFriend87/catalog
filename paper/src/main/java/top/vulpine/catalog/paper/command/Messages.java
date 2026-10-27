@@ -33,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.Predicate;
 
 /**
  * All chat messages the plugin sends.
@@ -86,7 +87,44 @@ public final class Messages {
 
     // --- /catalog help ----------------------------------------------------------------------
 
-    public static List<Component> help() {
+    /** The help screen in groups, each separated by an empty line. */
+    private static final List<List<Entry>> HELP = List.of(
+            List.of(
+                    new Entry("list", "", "Managed plugins"),
+                    new Entry("info", "<plugin>", "Details about a plugin"),
+                    new Entry("search", "<query>", "Search plugins on Modrinth"),
+                    new Entry("versions", "<plugin>", "Newest build of each channel")),
+            List.of(
+                    new Entry("install", "<slug> [version]", "Install a plugin"),
+                    new Entry("update", "<plugin|all>", "Update a plugin"),
+                    new Entry("cancel", "<plugin>", "Drop a downloaded update"),
+                    new Entry("history", "", "What Catalog has done"),
+                    new Entry("uninstall", "<plugin>", "Move a plugin to the trash"),
+                    new Entry("trash", "", "Restore a trashed plugin")),
+            List.of(
+                    new Entry("settings", "<plugin>", "Open settings for a plugin"),
+                    new Entry("channel", "<plugin> <channel>", "Which builds to follow"),
+                    new Entry("auto", "<plugin> <on|off>", "Enable/disable auto-updates"),
+                    new Entry("soak", "<plugin> <window>", "Change soak time for a plugin"),
+                    new Entry("hold", "<plugin>", "Freeze a plugin at its version"),
+                    new Entry("unhold", "<plugin>", "Allow updates again"),
+                    new Entry("untrack", "<plugin>", "Stop managing a plugin"),
+                    new Entry("track", "<jar>", "Manage a plugin again")),
+            List.of(
+                    new Entry("reload", "", "Reload the configuration")));
+
+    private record Entry(String name, String arguments, String description) {
+
+        String command() {
+            return "/catalog " + name;
+        }
+
+    }
+
+    /**
+     * @param allowed whether the viewer may run a command
+     */
+    public static List<Component> help(Predicate<String> allowed) {
 
         List<Component> out = new ArrayList<>();
 
@@ -95,36 +133,20 @@ public final class Messages {
                 .append(Component.text("  commands", MUTED))
                 .build());
 
-        out.add(Component.empty());
+        for (List<Entry> group : HELP) {
 
-        out.add(entry("list", "", "Managed plugins"));
-        out.add(entry("info", "<plugin>", "Details about a plugin"));
-        out.add(entry("search", "<query>", "Search plugins on Modrinth"));
-        out.add(entry("versions", "<plugin>", "Newest build of each channel"));
+            List<Entry> shown = group.stream().filter(entry -> allowed.test(entry.command())).toList();
 
-        out.add(Component.empty());
+            if (shown.isEmpty()) {
+                continue;
+            }
 
-        out.add(entry("install", "<slug> [version]", "Install a plugin"));
-        out.add(entry("update", "<plugin|all>", "Update a plugin"));
-        out.add(entry("cancel", "<plugin>", "Drop a downloaded update"));
-        out.add(entry("history", "", "What Catalog has done"));
-        out.add(entry("uninstall", "<plugin>", "Move a plugin to the trash"));
-        out.add(entry("trash", "", "Restore a trashed plugin"));
+            out.add(Component.empty());
 
-        out.add(Component.empty());
-
-        out.add(entry("settings", "<plugin>", "Open settings for a plugin"));
-        out.add(entry("channel", "<plugin> <channel>", "Which builds to follow"));
-        out.add(entry("auto", "<plugin> <on|off>", "Enable/disable auto-updates"));
-        out.add(entry("soak", "<plugin> <window>", "Change soak time for a plugin"));
-        out.add(entry("hold", "<plugin>", "Freeze a plugin at its version"));
-        out.add(entry("unhold", "<plugin>", "Allow updates again"));
-        out.add(entry("untrack", "<plugin>", "Stop managing a plugin"));
-        out.add(entry("track", "<jar>", "Manage a plugin again"));
-
-        out.add(Component.empty());
-
-        out.add(entry("reload", "", "Reload the configuration"));
+            for (Entry entry : shown) {
+                out.add(entry(entry.name(), entry.arguments(), entry.description()));
+            }
+        }
 
         return out;
     }
@@ -141,12 +163,8 @@ public final class Messages {
             row.append(Component.text(" " + arguments, MUTED).decorate(TextDecoration.ITALIC));
         }
 
-        return row.append(Component.text("  " + description, MUTED))
-                .clickEvent(arguments.isEmpty()
-                        ? ClickEvent.runCommand(command)
-                        : ClickEvent.suggestCommand(command))
-                .hoverEvent(HoverEvent.showText(explain(description, command)))
-                .build();
+        return Permitted.link(row.append(Component.text("  " + description, MUTED)).build(), command,
+                explain(description, command), null);
     }
 
     // --- join -------------------------------------------------------------------------------
@@ -225,42 +243,38 @@ public final class Messages {
             case WAITING -> "/catalog list --restart";
         };
 
-        TextComponent.Builder hover = Component.text()
+        TextComponent.Builder info = Component.text()
                 .append(Component.text(meaning, MUTED))
-                .append(Component.newline())
                 .append(Component.newline());
 
         for (Notice.Item plugin : plugins.subList(0, Math.min(count, NOTICE_PLUGINS))) {
 
-            hover.append(Component.text(plugin.name(), TEXT));
+            info.append(Component.newline()).append(Component.text(plugin.name(), TEXT));
 
             if (plugin.detail() != null) {
-                hover.append(Component.text("  " + plugin.detail(), MUTED));
+                info.append(Component.text("  " + plugin.detail(), MUTED));
             }
 
             if (plugin.reason() != null) {
-                hover.append(Component.newline())
+                info.append(Component.newline())
                         .append(Component.text(INDENT + "Reason: " + plugin.reason(), MUTED));
             }
-
-            hover.append(Component.newline());
         }
 
         if (count > NOTICE_PLUGINS) {
-            hover.append(Component.text("and " + (count - NOTICE_PLUGINS) + " more", MUTED))
-                    .append(Component.newline());
+            info.append(Component.newline())
+                    .append(Component.text("and " + (count - NOTICE_PLUGINS) + " more", MUTED));
         }
 
-        hover.append(Component.newline()).append(explain(command.startsWith("/catalog history")
-                ? "Open the history" : "Open the plugin list", command));
-
-        ClickEvent click = ClickEvent.runCommand(command);
-        HoverEvent<Component> shown = HoverEvent.showText(hover.build());
+        Component denied = info.build();
+        Component hover = denied.append(Component.newline()).append(Component.newline())
+                .append(explain(command.startsWith("/catalog history")
+                        ? "Open the history" : "Open the plugin list", command));
 
         TextComponent.Builder row = line()
                 .append(Component.text(INDENT))
-                .append(Component.text(count, colour).clickEvent(click).hoverEvent(shown))
-                .append(Component.text(" " + words + "  ", MUTED).clickEvent(click).hoverEvent(shown));
+                .append(Permitted.link(Component.text(count, colour), command, hover, denied))
+                .append(Permitted.link(Component.text(" " + words + "  ", MUTED), command, hover, denied));
 
         List<Notice.Item> named = plugins.subList(0, Math.min(count, NOTICE_NAMES));
 
@@ -269,10 +283,10 @@ public final class Messages {
             Notice.Item plugin = named.get(i);
 
             if (i > 0) {
-                row.append(Component.text(", ", TEXT).clickEvent(click).hoverEvent(shown));
+                row.append(Permitted.link(Component.text(", ", TEXT), command, hover, denied));
             }
 
-            row.append(Component.text(plugin.name(), TEXT).clickEvent(click).hoverEvent(shown));
+            row.append(Permitted.link(Component.text(plugin.name(), TEXT), command, hover, denied));
 
             if (plugin.rollback() != null) {
                 row.append(Component.space()).append(rollbackIcon(plugin.rollback(),
@@ -282,9 +296,8 @@ public final class Messages {
 
         if (count > NOTICE_NAMES) {
             String more = "/catalog list";
-            row.append(Component.text(" and " + (count - NOTICE_NAMES) + " more", MUTED)
-                    .clickEvent(ClickEvent.runCommand(more))
-                    .hoverEvent(HoverEvent.showText(explain("Open the plugin list", more))));
+            row.append(Permitted.link(Component.text(" and " + (count - NOTICE_NAMES) + " more", MUTED), more,
+                    explain("Open the plugin list", more), null));
         }
 
         return row.build();
@@ -324,13 +337,11 @@ public final class Messages {
 
         String command = "/catalog settings " + key;
 
-        return Component.text("Auto-update was turned off", MUTED)
-                .clickEvent(ClickEvent.runCommand(command))
-                .hoverEvent(HoverEvent.showText(Component.text(
-                                "Turned off by the rollback, so " + from + " is not downloaded again",
-                                TEXT)
-                        .append(Component.newline())
-                        .append(explain("Open settings", command))));
+        Component info = Component.text(
+                "Turned off by the rollback, so " + from + " is not downloaded again", TEXT);
+
+        return Permitted.link(Component.text("Auto-update was turned off", MUTED), command,
+                info.append(Component.newline()).append(explain("Open settings", command)), info);
     }
 
     // --- /catalog list ----------------------------------------------------------------------
@@ -523,23 +534,20 @@ public final class Messages {
 
     private static Component name(TrackedPlugin plugin, String screen) {
 
-        Component hover = Component.text(plugin.displayName(), TEXT)
+        Component info = Component.text(plugin.displayName(), TEXT)
                 .append(Component.newline())
                 .append(Component.text(plugin.versionNumber() == null ? "unknown version"
                         : plugin.versionNumber(), MUTED))
                 .append(Component.text("  " + plugin.channel().apiName(), MUTED))
                 .append(Component.newline())
                 .append(Component.text(String.valueOf(plugin.fileName()), MUTED))
-                .append(waiting(plugin))
-                .append(Component.newline())
-                .append(Component.newline())
-                .append(Component.text("Open the plugin page", TEXT))
-                .append(Component.newline())
-                .append(Component.text("/catalog info " + key(plugin), MUTED));
+                .append(waiting(plugin));
 
-        return Component.text(plugin.displayName(), TEXT)
-                .clickEvent(ClickEvent.runCommand(from("/catalog info " + key(plugin), screen)))
-                .hoverEvent(HoverEvent.showText(hover));
+        String command = "/catalog info " + key(plugin);
+
+        return Permitted.link(Component.text(plugin.displayName(), TEXT), from(command, screen),
+                info.append(Component.newline()).append(Component.newline())
+                        .append(explain("Open the plugin page", command)), info);
     }
 
     /**
@@ -797,8 +805,12 @@ public final class Messages {
             row.add(button("Install", from("/catalog install " + key, here), BRAND,
                     "Install " + target.versionNumber()));
 
-            row.add(button("Versions", from("/catalog versions " + key, here), MUTED,
-                    "Choose a build: the newest release, beta and alpha for this server"));
+            String versions = from("/catalog versions " + key, here);
+
+            row.add(Permitted.unless("/catalog install " + key,
+                    button("Versions", versions, MUTED,
+                            "Choose a build: the newest release, beta and alpha for this server"),
+                    button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
 
             if (view.declaresAnything()) {
                 row.add(button("Dependencies", from("/catalog dependencies " + key + described(view), here), MUTED,
@@ -819,8 +831,11 @@ public final class Messages {
                             + " for the next restart" + replaces(installed)));
         }
 
-        row.add(button("Switch", from("/catalog versions " + key, here), MUTED,
-                "Choose a different version"));
+        String versions = from("/catalog versions " + key, here);
+
+        row.add(Permitted.unless("/catalog install " + key,
+                button("Switch", versions, MUTED, "Choose a different version"),
+                button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
 
         if (view.declaresAnything()) {
             row.add(button("Dependencies", from("/catalog dependencies " + key + described(view), here), MUTED,
@@ -974,10 +989,8 @@ public final class Messages {
             return chosen(label);
         }
 
-        return Component.text(label, MUTED)
-                .clickEvent(ClickEvent.runCommand(from(command, here)))
-                .hoverEvent(HoverEvent.showText(explain(description, command)))
-                .append(Component.text("  ", MUTED));
+        return Permitted.link(Component.text(label, MUTED).append(Component.text("  ", MUTED)),
+                from(command, here), explain(description, command), null);
     }
 
     /** The value a setting currently holds. */
@@ -1142,14 +1155,16 @@ public final class Messages {
         boolean waiting = installed != null && installed.pendingRestart();
         boolean runs = version.gameVersions() != null && version.gameVersions().contains(gameVersion);
 
-        Component hover = Component.text(version.versionNumber(), TEXT)
+        Component info = Component.text(version.versionNumber(), TEXT)
                 .append(Component.newline())
                 .append(Component.text("published  ", MUTED))
                 .append(Component.text(ago(version.datePublished()), TEXT))
                 .append(Component.newline())
                 .append(Component.text("for  ", MUTED))
                 .append(Component.text(version.gameVersions() == null ? "unknown"
-                        : String.join(", ", version.gameVersions()), TEXT))
+                        : String.join(", ", version.gameVersions()), TEXT));
+
+        Component hover = info
                 .append(Component.newline())
                 .append(Component.newline())
                 .append(Component.text(staged ? "Waiting for a restart"
@@ -1189,11 +1204,13 @@ public final class Messages {
                 : from("/catalog install " + project.slug() + " " + version.id()
                         + (runs ? "" : " --incompatible"), here);
 
-        return row.hoverEvent(HoverEvent.showText(hover))
-                .clickEvent(command == null
-                        ? ClickEvent.suggestCommand("/catalog info " + project.slug())
-                        : ClickEvent.runCommand(command))
-                .build();
+        if (command == null) {
+            return row.hoverEvent(HoverEvent.showText(hover))
+                    .clickEvent(ClickEvent.suggestCommand("/catalog info " + project.slug()))
+                    .build();
+        }
+
+        return Permitted.link(row.build(), command, hover, info);
     }
 
     private static Component channel(ReleaseChannel channel) {
@@ -1259,26 +1276,24 @@ public final class Messages {
 
     private static Component hit(SearchHit result, boolean installed) {
 
-        Component hover = Component.text(result.title(), TEXT)
+        Component info = Component.text(result.title(), TEXT)
                 .append(Component.newline())
                 .append(Component.text(result.description() == null ? "" : result.description(), MUTED))
                 .append(Component.newline())
                 .append(Component.newline())
-                .append(Component.text(result.author() == null ? "" : "by " + result.author(), MUTED))
-                .append(Component.newline())
-                .append(Component.newline())
-                .append(Component.text("Open the plugin page", TEXT))
-                .append(Component.newline())
-                .append(Component.text("/catalog info " + result.slug(), MUTED));
+                .append(Component.text(result.author() == null ? "" : "by " + result.author(), MUTED));
 
-        return line()
-                .append(Component.text(INDENT))
-                .append(Component.text(result.title(), TEXT))
-                .append(Component.text("  " + compact(result.downloads()), MUTED))
-                .append(installed ? Component.text("  installed", DONE) : Component.empty())
-                .clickEvent(ClickEvent.runCommand(from("/catalog info " + result.slug(), null)))
-                .hoverEvent(HoverEvent.showText(hover))
-                .build();
+        String command = "/catalog info " + result.slug();
+
+        return Permitted.link(line()
+                        .append(Component.text(INDENT))
+                        .append(Component.text(result.title(), TEXT))
+                        .append(Component.text("  " + compact(result.downloads()), MUTED))
+                        .append(installed ? Component.text("  installed", DONE) : Component.empty())
+                        .build(),
+                from(command, null),
+                info.append(Component.newline()).append(Component.newline())
+                        .append(explain("Open the plugin page", command)), info);
     }
 
     // --- /catalog dependencies -----------------------------------------------------------------------
@@ -1369,8 +1384,11 @@ public final class Messages {
                 .append(button("Install", from("/catalog install " + row.slug(), here), BRAND,
                         "Install " + row.name() + " " + row.version()))
                 .append(Component.space())
-                .append(button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
-                        "Choose a build of " + row.name()))
+                .append(Permitted.unless("/catalog install " + row.slug(),
+                        button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
+                                "Choose a build of " + row.name()),
+                        button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
+                                "The newest release, beta and alpha of " + row.name())))
                 .build();
     }
 
@@ -1662,16 +1680,17 @@ public final class Messages {
             row.append(Component.text(entry.name(), TEXT)).append(Component.text("  "));
         }
 
-        row.append(Component.text(said(entry), colourOf(entry.event())))
-                .hoverEvent(HoverEvent.showText(historyDetail(entry)));
+        row.append(Component.text(said(entry), colourOf(entry.event())));
+
+        Component detail = historyDetail(entry);
 
         // A row narrows the list to its own plugin, which is how the filter is found without a
         // button for it anywhere.
-        if (entry.slug() != null) {
-            row.clickEvent(ClickEvent.runCommand("/catalog history --plugin " + entry.slug()));
+        if (entry.slug() == null) {
+            return row.hoverEvent(HoverEvent.showText(detail)).build();
         }
 
-        return row.build();
+        return Permitted.link(row.build(), "/catalog history --plugin " + entry.slug(), detail, detail);
     }
 
     /**

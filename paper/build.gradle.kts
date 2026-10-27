@@ -65,8 +65,6 @@ bukkit {
     foliaSupported = true
 
     val commands = linkedMapOf(
-        "about" to "Shows the version and credits.",
-        "help" to "Lists all commands.",
         "list" to "Lists managed plugins and the history.",
         "info" to "Shows a plugin's details, versions and dependencies.",
         "search" to "Searches Modrinth.",

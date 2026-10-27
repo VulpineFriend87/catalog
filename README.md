@@ -54,12 +54,12 @@ It also records what went wrong and why: automatic updates that were blocked or 
 
 ## Commands
 
-Everything is clickable, so you rarely need to type any command. `/catalog help` lists all commands. The command also answers to `/ctlg`, `/cata`, `/ctl` and `/clg`.
+Everything is clickable, so you rarely need to type any command. `/catalog help` lists the commands you have permission for. The command also answers to `/ctlg`, `/cata`, `/ctl` and `/clg`.
 
 | Command | | Permission |
 | --- | --- | --- |
-| `/catalog` | Version and credits | `catalog.command.about` |
-| `/catalog help` | All commands | `catalog.command.help` |
+| `/catalog` | Version and credits | Any `catalog.command` node |
+| `/catalog help` | The commands you have permission for | Any `catalog.command` node |
 | `/catalog list [--updates] [--restart] [--held] [--untracked]` | All plugins managed by Catalog, and what needs updating | `catalog.command.list` |
 | `/catalog info <plugin>` | All available information about any plugin, whether installed or not | `catalog.command.info` |
 | `/catalog search <query>` | Searches Modrinth for plugins compatible with your server | `catalog.command.search` |
