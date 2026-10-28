@@ -14,10 +14,13 @@ import revxrsal.commands.annotation.Sized;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.annotation.Switch;
+import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.install.DependencyResolver;
+import top.vulpine.catalog.modrinth.Projects;
 import top.vulpine.catalog.modrinth.model.Dependency;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
@@ -75,15 +78,18 @@ public final class MainCommand {
     /** How long a command waits before saying it is still waiting. */
     private static final Duration PATIENCE = Duration.ofSeconds(2);
 
-    private final CatalogPaper plugin;
+    private final CatalogPaper paper;
+
+    private final Catalog catalog;
 
     private final Map<String, Pending> confirmations = new ConcurrentHashMap<>();
 
     /** Which screen the button that ran this command was on. */
     private final ClickContext context;
 
-    public MainCommand(CatalogPaper plugin, ClickContext context) {
-        this.plugin = plugin;
+    public MainCommand(CatalogPaper paper, Catalog catalog, ClickContext context) {
+        this.paper = paper;
+        this.catalog = catalog;
         this.context = context;
     }
 
@@ -91,9 +97,9 @@ public final class MainCommand {
     @RequiresPermission(CommandPermissions.ANY)
     public void about(CommandSender sender) {
 
-        List<String> authors = plugin.getDescription().getAuthors();
+        List<String> authors = paper.getDescription().getAuthors();
 
-        send(sender, Messages.about(plugin.getDescription().getVersion(),
+        send(sender, Messages.about(paper.getDescription().getVersion(),
                 authors.isEmpty() ? "Vulpine" : String.join(", ", authors)));
     }
 
@@ -109,11 +115,11 @@ public final class MainCommand {
      */
     private void runAsync(CommandSender sender, Runnable work) {
 
-        plugin.getScheduler().runAsync(task -> {
+        paper.getScheduler().runAsync(task -> {
 
             AtomicBoolean done = new AtomicBoolean();
 
-            WrappedTask waiting = plugin.getScheduler().runLaterAsync(() -> {
+            WrappedTask waiting = paper.getScheduler().runLaterAsync(() -> {
                 if (!done.get()) {
                     send(sender, Messages.stillWaiting());
                 }
@@ -206,15 +212,15 @@ public final class MainCommand {
 
         try {
 
-            ModrinthProject project = plugin.project(query);
+            ModrinthProject project = catalog.project(query);
 
             if (project == null) {
                 send(sender, Messages.unknownPlugin(query));
                 return;
             }
 
-            TrackedPlugin tracked = plugin.getTracking().byProjectId(project.id());
-            InstalledJar untracked = tracked == null ? plugin.getLibrary().untrackedJar(project.id()) : null;
+            TrackedPlugin tracked = catalog.getTracking().byProjectId(project.id());
+            InstalledJar untracked = tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null;
 
             if (untracked != null) {
                 send(sender, Messages.installedUntracked(project.title(), untracked.fileName()));
@@ -240,12 +246,12 @@ public final class MainCommand {
                 return;
             }
 
-            String notFor = runsHere(version) ? null : plugin.gameVersion();
+            String notFor = runsHere(version) ? null : catalog.gameVersion();
 
             ReleaseChannel follow = version.versionType() == null
                     ? defaultChannel() : version.versionType();
 
-            DependencyResolver.Resolution resolution = plugin.dependenciesOf(version);
+            DependencyResolver.Resolution resolution = catalog.dependenciesOf(version);
             String here = ClickContext.change("install", project.slug(), version.id());
 
             boolean asks = tracked != null || notFor != null || needsAnswer(resolution)
@@ -262,19 +268,19 @@ public final class MainCommand {
                 return;
             }
 
-            List<CatalogPaper.Pending> needed = alone(data)
+            List<Installer.Pending> needed = alone(data)
                     ? List.of() : pendingFor(resolution.missing(), project);
 
             if (tracked != null) {
 
                 if (!needed.isEmpty()) {
-                    plugin.install(needed, sender.getName());
+                    catalog.install(needed, sender.getName());
                 }
 
                 boolean rollback = isOlder(version, tracked);
 
-                plugin.setChannel(tracked, follow, sender.getName());
-                plugin.stage(tracked, version, sender.getName(),
+                catalog.setChannel(tracked, follow, sender.getName());
+                catalog.stage(tracked, version, sender.getName(),
                         rollback ? Event.ROLLED_BACK : Event.SWITCHED);
 
                 redraw(sender, screen(data));
@@ -282,16 +288,16 @@ public final class MainCommand {
 
                 // Keeps the next check from downloading the newer build again.
                 if (rollback && tracked.autoUpdate()) {
-                    plugin.setAutoUpdate(tracked, false, sender.getName());
+                    catalog.setAutoUpdate(tracked, false, sender.getName());
                     send(sender, Messages.autoUpdateTurnedOff(tracked.versionNumber(), key(tracked)));
                 }
 
                 return;
             }
 
-            List<CatalogPaper.Pending> pending = new ArrayList<>(needed);
-            pending.add(new CatalogPaper.Pending(project, version, follow, true, null));
-            plugin.install(pending, sender.getName());
+            List<Installer.Pending> pending = new ArrayList<>(needed);
+            pending.add(new Installer.Pending(project, version, follow, true, null));
+            catalog.install(pending, sender.getName());
 
             redraw(sender, screen(data));
             send(sender, pending.size() == 1
@@ -342,7 +348,7 @@ public final class MainCommand {
             try {
 
                 TrackedPlugin tracked = resolve(query);
-                ModrinthProject project = plugin.project(tracked != null
+                ModrinthProject project = catalog.project(tracked != null
                         ? tracked.projectId() : query);
 
                 if (project == null) {
@@ -350,20 +356,20 @@ public final class MainCommand {
                     return;
                 }
 
-                TrackedPlugin installed = plugin.getTracking().byProjectId(project.id());
+                TrackedPlugin installed = catalog.getTracking().byProjectId(project.id());
                 boolean untracked = installed == null
-                        && plugin.getLibrary().untrackedJar(project.id()) != null;
-                List<ModrinthVersion> builds = incompatible ? plugin.allVersions(project.id())
-                        : plugin.compatibleVersions(project.id());
+                        && catalog.getLibrary().untrackedJar(project.id()) != null;
+                List<ModrinthVersion> builds = incompatible ? catalog.allVersions(project.id())
+                        : catalog.compatibleVersions(project.id());
 
                 if (all) {
                     send(sender, Messages.allVersions(project, builds, installed, untracked,
-                            plugin.gameVersion(), plugin.gameVersions(), incompatible, page,
+                            catalog.gameVersion(), catalog.gameVersions(), incompatible, page,
                             screen(data)));
                     return;
                 }
 
-                send(sender, Messages.versions(project, plugin.gameVersion(), plugin.gameVersions(),
+                send(sender, Messages.versions(project, catalog.gameVersion(), catalog.gameVersions(),
                         newestOfEachChannel(builds), installed, untracked, incompatible,
                         screen(data)));
 
@@ -402,17 +408,17 @@ public final class MainCommand {
      */
     private ModrinthVersion build(ModrinthProject project, String wanted, boolean incompatible) {
 
-        ModrinthVersion version = incompatible ? choose(plugin.allVersions(project.id()), wanted) : null;
+        ModrinthVersion version = incompatible ? choose(catalog.allVersions(project.id()), wanted) : null;
 
         // The two lists can come from different loaders.
-        return version != null ? version : choose(plugin.compatibleVersions(project.id()), wanted);
+        return version != null ? version : choose(catalog.compatibleVersions(project.id()), wanted);
     }
 
     /**
      * Whether a build declares the Minecraft version this server runs.
      */
     private boolean runsHere(ModrinthVersion version) {
-        return version.gameVersions() != null && version.gameVersions().contains(plugin.gameVersion());
+        return version.gameVersions() != null && version.gameVersions().contains(catalog.gameVersion());
     }
 
     /**
@@ -423,7 +429,7 @@ public final class MainCommand {
     private static ModrinthVersion choose(List<ModrinthVersion> compatible, String wanted) {
 
         if (wanted == null) {
-            return CatalogPaper.installTarget(compatible);
+            return Projects.installTarget(compatible);
         }
 
         for (ModrinthVersion version : compatible) {
@@ -445,7 +451,7 @@ public final class MainCommand {
     @RequiresPermission("command.reload")
     public void reload(CommandSender sender) {
 
-        send(sender, plugin.loadConfiguration()
+        send(sender, paper.loadConfiguration()
                 ? Messages.reloaded()
                 : Messages.configFailed());
     }
@@ -480,7 +486,7 @@ public final class MainCommand {
             return;
         }
 
-        plugin.setAutoUpdate(tracked, state.on(), sender.getName());
+        catalog.setAutoUpdate(tracked, state.on(), sender.getName());
         done(sender, context.take(sender), Messages.autoSet(tracked.displayName(), state.on()));
     }
 
@@ -505,9 +511,9 @@ public final class MainCommand {
             return;
         }
 
-        plugin.setSoak(tracked, minutes, sender.getName());
+        catalog.setSoak(tracked, minutes, sender.getName());
         done(sender, context.take(sender), Messages.soakSet(tracked.displayName(), minutes,
-                plugin.defaultSoakMinutes()));
+                catalog.defaultSoakMinutes()));
     }
 
     /**
@@ -566,7 +572,7 @@ public final class MainCommand {
             return;
         }
 
-        plugin.setChannel(tracked, channel, sender.getName());
+        catalog.setChannel(tracked, channel, sender.getName());
         done(sender, context.take(sender), Messages.channelSet(tracked.displayName(), channel));
     }
 
@@ -610,8 +616,8 @@ public final class MainCommand {
                 return;
             }
 
-            ModrinthProject project = plugin.project(tracked.projectId());
-            DependencyResolver.Resolution resolution = plugin.dependenciesOf(candidate.version());
+            ModrinthProject project = catalog.project(tracked.projectId());
+            DependencyResolver.Resolution resolution = catalog.dependenciesOf(candidate.version());
 
             // Asks when the new build has missing requirements.
             if (project != null) {
@@ -629,10 +635,10 @@ public final class MainCommand {
             }
 
             if (!alone(data) && !resolution.missing().isEmpty()) {
-                plugin.install(pendingFor(resolution.missing(), project), sender.getName());
+                catalog.install(pendingFor(resolution.missing(), project), sender.getName());
             }
 
-            plugin.stage(candidate, sender.getName());
+            catalog.stage(candidate, sender.getName());
 
             redraw(sender, screen(data));
             send(sender, Messages.staged(tracked.displayName(), candidate.to()));
@@ -664,7 +670,7 @@ public final class MainCommand {
 
                 // Resolved against the log rather than the tracking file, so a plugin that has
                 // since been removed can still be looked up.
-                projectId = plugin.loggedProjectId(which);
+                projectId = catalog.loggedProjectId(which);
 
                 if (projectId == null) {
                     send(sender, Messages.unknownPlugin(which));
@@ -680,7 +686,7 @@ public final class MainCommand {
                 command.append(" --author ").append(author);
             }
 
-            List<HistoryEntry> entries = plugin.history(projectId, author);
+            List<HistoryEntry> entries = catalog.history(projectId, author);
 
             if (event != null && !event.isBlank()) {
 
@@ -722,7 +728,7 @@ public final class MainCommand {
 
         runAsync(sender, () -> {
 
-            if (!plugin.cancelUpdate(tracked, sender.getName())) {
+            if (!catalog.cancelUpdate(tracked, sender.getName())) {
                 send(sender, Messages.failed("Could not delete the downloaded build for "
                         + tracked.displayName() + ", see the console."));
                 return;
@@ -739,8 +745,8 @@ public final class MainCommand {
 
             try {
 
-                plugin.refreshUpdates();
-                List<UpdateCandidate> candidates = plugin.updates();
+                catalog.refreshUpdates();
+                List<UpdateCandidate> candidates = catalog.openUpdates();
 
                 if (candidates.isEmpty()) {
                     send(sender, Messages.upToDate());
@@ -755,7 +761,7 @@ public final class MainCommand {
                     try {
 
                         List<DependencyResolver.Requirement> missing =
-                                plugin.missingFor(candidate.version());
+                                catalog.missingFor(candidate.version());
 
                         if (!missing.isEmpty()) {
                             failures.add(Messages.needsDependencies(
@@ -763,7 +769,7 @@ public final class MainCommand {
                             continue;
                         }
 
-                        plugin.stage(candidate, sender.getName());
+                        catalog.stage(candidate, sender.getName());
                         staged++;
                     } catch (Exception e) {
                         // One plugin failing is not a reason to abandon the rest of the queue, and
@@ -802,7 +808,7 @@ public final class MainCommand {
             return;
         }
 
-        if (plugin.isSelf(tracked)) {
+        if (catalog.isSelf(tracked)) {
             send(sender, Messages.cannotRemoveSelf(tracked.displayName()));
             return;
         }
@@ -819,7 +825,7 @@ public final class MainCommand {
                 // already failed to start.
                 if (!confirmed(sender, "remove:" + tracked.projectId(), data)) {
 
-                    List<TrackedPlugin> dependents = plugin.dependentsOf(tracked);
+                    List<TrackedPlugin> dependents = catalog.dependentsOf(tracked);
 
                     if (!dependents.isEmpty()) {
                         send(sender, Messages.confirmRemove(tracked, dependents, Press.of(data)));
@@ -827,10 +833,10 @@ public final class MainCommand {
                     }
                 }
 
-                plugin.noticeLoaded();
+                catalog.noticeLoaded();
                 boolean loaded = !tracked.pendingLoad();
 
-                TrashBin.Result result = plugin.uninstall(tracked, sender.getName());
+                TrashBin.Result result = catalog.uninstall(tracked, sender.getName());
 
                 redraw(sender, screen(data));
                 send(sender, Messages.removed(name, loaded, result == null ? null : result.entry(),
@@ -877,7 +883,7 @@ public final class MainCommand {
                 return;
             }
 
-            DependencyResolver.Resolution resolution = plugin.dependenciesOf(version);
+            DependencyResolver.Resolution resolution = catalog.dependenciesOf(version);
 
             List<DependencyResolver.Requirement> declared = new ArrayList<>(resolution.required());
             declared.addAll(resolution.optional());
@@ -954,7 +960,7 @@ public final class MainCommand {
         for (DependencyResolver.Requirement requirement : requirements) {
 
             ModrinthProject project = projects.get(requirement.projectId());
-            TrackedPlugin installed = plugin.getTracking().byProjectId(requirement.projectId());
+            TrackedPlugin installed = catalog.getTracking().byProjectId(requirement.projectId());
 
             String version = installed != null ? installed.versionNumber()
                     : requirement.available() == null ? null
@@ -975,11 +981,11 @@ public final class MainCommand {
     /**
      * What to install for each missing requirement.
      */
-    private List<CatalogPaper.Pending> pendingFor(List<DependencyResolver.Requirement> missing,
+    private List<Installer.Pending> pendingFor(List<DependencyResolver.Requirement> missing,
                                                   ModrinthProject root) {
 
         Map<String, ModrinthProject> projects = projectsFor(missing);
-        List<CatalogPaper.Pending> pending = new ArrayList<>();
+        List<Installer.Pending> pending = new ArrayList<>();
 
         for (DependencyResolver.Requirement requirement : missing) {
 
@@ -992,7 +998,7 @@ public final class MainCommand {
             ReleaseChannel follow = requirement.available().versionType() == null
                     ? defaultChannel() : requirement.available().versionType();
 
-            pending.add(new CatalogPaper.Pending(project, requirement.available(), follow, false,
+            pending.add(new Installer.Pending(project, requirement.available(), follow, false,
                     root == null ? null : root.title()));
         }
 
@@ -1019,7 +1025,7 @@ public final class MainCommand {
         }
 
         try {
-            for (ModrinthProject project : plugin.getModrinth().projects(ids).join()) {
+            for (ModrinthProject project : catalog.getModrinth().projects(ids).join()) {
                 projects.put(project.id(), project);
             }
         } catch (Exception ignored) {
@@ -1046,8 +1052,8 @@ public final class MainCommand {
 
     private void showTrash(CommandSender sender, int page) {
         abandonConfirmation(sender);
-        send(sender, Messages.trash(plugin.trashed(),
-                plugin.getConfiguration().trash.retentionDays, page));
+        send(sender, Messages.trash(catalog.trashed(),
+                paper.getConfiguration().trash.retentionDays, page));
     }
 
     /**
@@ -1072,7 +1078,7 @@ public final class MainCommand {
                     return;
                 }
 
-                TrackedPlugin tracked = plugin.restore(entry, sender.getName());
+                TrackedPlugin tracked = catalog.restore(entry, sender.getName());
 
                 redraw(sender, screen(data));
                 send(sender, Messages.restored(entry.displayName(), tracked != null));
@@ -1110,7 +1116,7 @@ public final class MainCommand {
                     return;
                 }
 
-                plugin.discardTrashed(entry, sender.getName());
+                catalog.discardTrashed(entry, sender.getName());
 
                 redraw(sender, screen(data));
                 send(sender, Messages.discarded(entry.displayName()));
@@ -1127,7 +1133,7 @@ public final class MainCommand {
 
             try {
 
-                int waiting = plugin.trashed().size();
+                int waiting = catalog.trashed().size();
 
                 if (waiting == 0) {
                     send(sender, Messages.trashAlreadyEmpty());
@@ -1139,7 +1145,7 @@ public final class MainCommand {
                     return;
                 }
 
-                int deleted = plugin.emptyTrash(sender.getName());
+                int deleted = catalog.emptyTrash(sender.getName());
 
                 redraw(sender, screen(data));
                 send(sender, Messages.emptied(deleted));
@@ -1156,7 +1162,7 @@ public final class MainCommand {
     private TrashEntry resolveTrashed(String query) {
 
         String wanted = ClickContext.strip(query).trim();
-        TrashEntry exact = plugin.trashed(wanted);
+        TrashEntry exact = catalog.trashed(wanted);
 
         if (exact != null) {
             return exact;
@@ -1164,7 +1170,7 @@ public final class MainCommand {
 
         String lowered = wanted.toLowerCase(Locale.ROOT);
 
-        for (TrashEntry entry : plugin.trashed()) {
+        for (TrashEntry entry : catalog.trashed()) {
 
             if (matches(entry.name(), lowered)
                     || matches(entry.slug(), lowered)
@@ -1199,10 +1205,10 @@ public final class MainCommand {
             // A staged build is already in the update folder, so leaving it there would update a
             // plugin Catalog has just been told to stop following.
             if (tracked.pendingRestart()) {
-                plugin.cancelUpdate(tracked, sender.getName());
+                catalog.cancelUpdate(tracked, sender.getName());
             }
 
-            plugin.untrack(tracked, sender.getName());
+            catalog.untrack(tracked, sender.getName());
             done(sender, data, Messages.untracked(name));
         });
     }
@@ -1224,7 +1230,7 @@ public final class MainCommand {
                 return;
             }
 
-            if (!plugin.track(jar, sender.getName())) {
+            if (!catalog.track(jar, sender.getName())) {
                 send(sender, Messages.unknownPlugin(query));
                 return;
             }
@@ -1243,7 +1249,7 @@ public final class MainCommand {
 
         String wanted = query.trim();
 
-        for (InstalledJar jar : plugin.untracked()) {
+        for (InstalledJar jar : catalog.untracked()) {
             if (jar.fileName().equalsIgnoreCase(wanted)
                     || Messages.shownName(jar).equalsIgnoreCase(wanted)) {
                 return jar;
@@ -1278,7 +1284,7 @@ public final class MainCommand {
             return;
         }
 
-        plugin.setHeld(tracked, held, sender.getName());
+        catalog.setHeld(tracked, held, sender.getName());
         done(sender, context.take(sender), Messages.held(tracked.displayName(), held));
     }
 
@@ -1340,7 +1346,7 @@ public final class MainCommand {
      */
     private void showSettings(CommandSender sender, TrackedPlugin tracked, String from) {
         abandonConfirmation(sender);
-        send(sender, Messages.settings(tracked, plugin.defaultSoakMinutes(), from));
+        send(sender, Messages.settings(tracked, catalog.defaultSoakMinutes(), from));
     }
 
     private static String key(TrackedPlugin plugin) {
@@ -1401,7 +1407,7 @@ public final class MainCommand {
 
         abandonConfirmation(sender);
 
-        if (plugin.getTracking().size() == 0 && plugin.untracked().isEmpty()) {
+        if (catalog.getTracking().size() == 0 && catalog.untracked().isEmpty()) {
             send(sender, Messages.nothingTracked());
             return;
         }
@@ -1409,23 +1415,23 @@ public final class MainCommand {
         if (refresh) {
 
             try {
-                plugin.refreshUpdates();
+                catalog.refreshUpdates();
             } catch (Exception ignored) {
                 // Shown under the list header.
             }
         }
 
-        plugin.noticeLoaded();
+        catalog.noticeLoaded();
 
         Map<String, EnableCheck.Failure> notEnabled = new HashMap<>();
 
-        for (EnableCheck.Failure failure : plugin.getEnableCheck().failures()) {
+        for (EnableCheck.Failure failure : paper.getEnableCheck().failures()) {
             notEnabled.put(failure.plugin().projectId(), failure);
         }
 
-        send(sender, Messages.list(plugin.getTracking().all(), plugin.updatesByProject(), notEnabled,
-                plugin.ownFileName(), plugin.untracked(), filters,
-                plugin.getUpdates().checkedAt(), plugin.getUpdates().unreachable()));
+        send(sender, Messages.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
+                catalog.ownFileName(), catalog.untracked(), filters,
+                catalog.getUpdates().checkedAt(), catalog.getUpdates().unreachable()));
     }
 
     /**
@@ -1434,7 +1440,7 @@ public final class MainCommand {
     private void showProject(CommandSender sender, String query) {
 
         abandonConfirmation(sender);
-        plugin.noticeLoaded();
+        catalog.noticeLoaded();
 
         try {
 
@@ -1445,7 +1451,7 @@ public final class MainCommand {
                 return;
             }
 
-            TrackedPlugin tracked = plugin.getTracking().byProjectId(project.id());
+            TrackedPlugin tracked = catalog.getTracking().byProjectId(project.id());
 
             ReleaseChannel channel = tracked != null ? tracked.channel() : defaultChannel();
 
@@ -1456,13 +1462,13 @@ public final class MainCommand {
                     .project(project)
                     .author(author(project.id()))
                     .latest(latest)
-                    .installTarget(CatalogPaper.installTarget(compatible))
+                    .installTarget(Projects.installTarget(compatible))
                     .installed(tracked)
-                    .untracked(tracked == null ? plugin.getLibrary().untrackedJar(project.id()) : null)
-                    .self(plugin.isSelf(tracked))
+                    .untracked(tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null)
+                    .self(catalog.isSelf(tracked))
                     .updateAvailable(isNewer(latest, tracked))
-                    .platformLoaders(plugin.platformLoaders())
-                    .gameVersions(plugin.gameVersions());
+                    .platformLoaders(catalog.platformLoaders())
+                    .gameVersions(catalog.gameVersions());
 
             for (ProjectView.Requirement requirement : requirements(latest)) {
                 view.requirement(requirement);
@@ -1494,7 +1500,7 @@ public final class MainCommand {
 
         try {
 
-            SearchResults results = plugin.search(query, Messages.PAGE,
+            SearchResults results = catalog.search(query, Messages.PAGE,
                     (page - 1) * Messages.PAGE);
 
             // Text search does not match project ids, so a query that found nothing and could
@@ -1516,14 +1522,14 @@ public final class MainCommand {
      */
     private UpdateCandidate candidateFor(TrackedPlugin tracked) {
 
-        UpdateCandidate candidate = plugin.updatesByProject().get(tracked.projectId());
+        UpdateCandidate candidate = catalog.updatesByProject().get(tracked.projectId());
 
         if (candidate != null) {
             return candidate;
         }
 
-        plugin.refreshUpdates();
-        return plugin.updatesByProject().get(tracked.projectId());
+        catalog.refreshUpdates();
+        return catalog.updatesByProject().get(tracked.projectId());
     }
 
     private List<ProjectView.Requirement> requirements(ModrinthVersion version) {
@@ -1557,7 +1563,7 @@ public final class MainCommand {
 
         try {
 
-            for (ModrinthProject required : plugin.getModrinth().projects(ids).join()) {
+            for (ModrinthProject required : catalog.getModrinth().projects(ids).join()) {
                 requirements.add(new ProjectView.Requirement(required.title(),
                         installed.contains(required.id())));
             }
@@ -1574,14 +1580,14 @@ public final class MainCommand {
 
     private ModrinthProject firstSearchHit(String query) {
 
-        SearchResults results = plugin.search(query, 1, 0);
+        SearchResults results = catalog.search(query, 1, 0);
 
         if (results.hits().isEmpty()) {
             return null;
         }
 
         SearchHit hit = results.hits().get(0);
-        return plugin.project(hit.slug() != null ? hit.slug() : hit.projectId());
+        return catalog.project(hit.slug() != null ? hit.slug() : hit.projectId());
     }
 
     /**
@@ -1590,7 +1596,7 @@ public final class MainCommand {
     private String author(String projectId) {
 
         try {
-            return TeamMember.credit(plugin.getModrinth().members(projectId).join());
+            return TeamMember.credit(catalog.getModrinth().members(projectId).join());
         } catch (Exception e) {
             return null;
         }
@@ -1599,7 +1605,7 @@ public final class MainCommand {
     private List<ModrinthVersion> compatibleOrEmpty(String projectId) {
 
         try {
-            return plugin.compatibleVersions(projectId);
+            return catalog.compatibleVersions(projectId);
         } catch (Exception e) {
             return List.of();
         }
@@ -1641,7 +1647,7 @@ public final class MainCommand {
 
         Set<String> ids = new HashSet<>();
 
-        for (TrackedPlugin tracked : plugin.getTracking().all()) {
+        for (TrackedPlugin tracked : catalog.getTracking().all()) {
             ids.add(tracked.projectId());
         }
 
@@ -1649,7 +1655,7 @@ public final class MainCommand {
     }
 
     private ReleaseChannel defaultChannel() {
-        return plugin.getConfiguration().tracking.defaults.channel;
+        return paper.getConfiguration().tracking.defaults.channel;
     }
 
     /**
@@ -1665,7 +1671,7 @@ public final class MainCommand {
         String wanted = ClickContext.strip(query).trim();
         TrackedPlugin tracked = resolve(wanted);
 
-        ModrinthProject project = plugin.project(tracked != null ? tracked.projectId() : wanted);
+        ModrinthProject project = catalog.project(tracked != null ? tracked.projectId() : wanted);
         return project != null ? project : firstSearchHit(wanted);
     }
 
@@ -1678,7 +1684,7 @@ public final class MainCommand {
     private TrackedPlugin resolve(String query) {
 
         String wanted = ClickContext.strip(query).toLowerCase(Locale.ROOT);
-        List<TrackedPlugin> all = plugin.getTracking().all();
+        List<TrackedPlugin> all = catalog.getTracking().all();
 
         for (TrackedPlugin tracked : all) {
             if (matches(tracked.displayName(), wanted)

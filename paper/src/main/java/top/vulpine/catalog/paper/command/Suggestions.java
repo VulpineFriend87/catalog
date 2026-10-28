@@ -4,6 +4,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import revxrsal.commands.node.ExecutionContext;
 import revxrsal.commands.stream.StringStream;
@@ -38,7 +39,7 @@ public final class Suggestions {
 
             List<String> names = new ArrayList<>();
 
-            for (InstalledJar jar : JavaPlugin.getPlugin(CatalogPaper.class).untracked()) {
+            for (InstalledJar jar : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().untracked()) {
                 names.add(Messages.shownName(jar));
             }
 
@@ -52,7 +53,7 @@ public final class Suggestions {
 
         @Override
         public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
-            return matching(context, JavaPlugin.getPlugin(CatalogPaper.class).loggedPlugins());
+            return matching(context, JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().loggedPlugins());
         }
 
     }
@@ -90,7 +91,7 @@ public final class Suggestions {
         @Override
         public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
 
-            Set<String> waiting = JavaPlugin.getPlugin(CatalogPaper.class).updatesByProject().keySet();
+            Set<String> waiting = JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().updatesByProject().keySet();
             List<String> names = names(plugin -> waiting.contains(plugin.projectId()));
 
             if (!names.isEmpty()) {
@@ -130,7 +131,7 @@ public final class Suggestions {
 
             List<String> names = new ArrayList<>();
 
-            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).trashed()) {
+            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().trashed()) {
                 names.add(quoted(entry.displayName()));
             }
 
@@ -147,7 +148,7 @@ public final class Suggestions {
 
             List<String> names = new ArrayList<>();
 
-            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).trashed()) {
+            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().trashed()) {
                 names.add(quoted(entry.displayName()));
             }
 
@@ -209,10 +210,10 @@ public final class Suggestions {
 
     private static List<String> names(Predicate<TrackedPlugin> filter) {
 
-        CatalogPaper plugin = JavaPlugin.getPlugin(CatalogPaper.class);
+        Catalog catalog = JavaPlugin.getPlugin(CatalogPaper.class).getCatalog();
         List<String> names = new ArrayList<>();
 
-        for (TrackedPlugin tracked : plugin.getTracking().all()) {
+        for (TrackedPlugin tracked : catalog.getTracking().all()) {
 
             if (filter.test(tracked)) {
                 names.add(suggestionFor(tracked));

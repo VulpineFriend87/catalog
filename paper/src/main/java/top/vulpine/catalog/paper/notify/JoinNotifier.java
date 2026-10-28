@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.MainCommand;
@@ -38,15 +39,18 @@ public final class JoinNotifier implements Listener {
     /** How many times to wait for the first update check before giving up on this join. */
     private static final int ATTEMPTS = 10;
 
-    private final CatalogPaper plugin;
+    private final CatalogPaper paper;
+
+    private final Catalog catalog;
 
     /**
      * The news each player has already heard this session, by plugin and build.
      */
     private final Map<UUID, Set<String>> heard = new ConcurrentHashMap<>();
 
-    public JoinNotifier(CatalogPaper plugin) {
-        this.plugin = plugin;
+    public JoinNotifier(CatalogPaper paper) {
+        this.paper = paper;
+        this.catalog = paper.getCatalog();
     }
 
     @EventHandler
@@ -54,7 +58,7 @@ public final class JoinNotifier implements Listener {
 
         Player player = event.getPlayer();
 
-        if (!plugin.getConfiguration().updates.notifyOnJoin
+        if (!paper.getConfiguration().updates.notifyOnJoin
                 || !PermissionChecker.hasPermission(player, "notify")) {
             return;
         }
@@ -63,7 +67,7 @@ public final class JoinNotifier implements Listener {
     }
 
     private void later(Player player, int attempts) {
-        plugin.getScheduler().runAtEntityLater(player, () -> tell(player, attempts),
+        paper.getScheduler().runAtEntityLater(player, () -> tell(player, attempts),
                 DELAY.toMillis(), TimeUnit.MILLISECONDS);
     }
 
@@ -74,7 +78,7 @@ public final class JoinNotifier implements Listener {
         }
 
         // No answer before the first check.
-        if (plugin.getUpdates().checkedAt() == null) {
+        if (catalog.getUpdates().checkedAt() == null) {
 
             if (attempts > 1) {
                 later(player, attempts - 1);
@@ -113,14 +117,14 @@ public final class JoinNotifier implements Listener {
      */
     private List<Notice> notices(Set<String> heardBefore, Set<String> news) {
 
-        plugin.noticeLoaded();
+        catalog.noticeLoaded();
 
         List<Notice> out = new ArrayList<>();
 
         List<Notice.Item> notEnabled = new ArrayList<>();
         Set<String> failed = new HashSet<>();
 
-        for (EnableCheck.Failure failure : plugin.getEnableCheck().failures()) {
+        for (EnableCheck.Failure failure : paper.getEnableCheck().failures()) {
 
             TrackedPlugin tracked = failure.plugin();
             failed.add(tracked.projectId());
@@ -148,7 +152,7 @@ public final class JoinNotifier implements Listener {
         Set<TrackedPlugin> missed = new HashSet<>();
         List<Notice.Item> missedNews = new ArrayList<>();
 
-        for (TrackedPlugin tracked : plugin.getLibrary().notApplied()) {
+        for (TrackedPlugin tracked : catalog.getLibrary().notApplied()) {
 
             if (!tracked.pendingRestart()) {
                 continue;
@@ -167,11 +171,11 @@ public final class JoinNotifier implements Listener {
 
         add(out, Notice.Kind.DID_NOT_APPLY, missedNews);
 
-        Map<String, String> failures = plugin.getUpdates().failures();
+        Map<String, String> failures = catalog.getUpdates().failures();
         List<Notice.Item> autoFailed = new ArrayList<>();
         List<Notice.Item> available = new ArrayList<>();
 
-        for (UpdateCandidate candidate : plugin.updates()) {
+        for (UpdateCandidate candidate : catalog.openUpdates()) {
 
             String builds = candidate.from() + " → " + candidate.to();
             String reason = failures.get(candidate.plugin().projectId());
@@ -184,7 +188,7 @@ public final class JoinNotifier implements Listener {
 
         List<Notice.Item> applied = new ArrayList<>();
 
-        for (TrackedPlugin tracked : plugin.getLibrary().applied()) {
+        for (TrackedPlugin tracked : catalog.getLibrary().applied()) {
 
             String key = "applied:" + tracked.projectId() + ":" + tracked.versionId();
 
@@ -198,7 +202,7 @@ public final class JoinNotifier implements Listener {
 
         List<TrackedPlugin> waiting = new ArrayList<>();
 
-        for (TrackedPlugin tracked : plugin.getTracking().all()) {
+        for (TrackedPlugin tracked : catalog.getTracking().all()) {
             if (tracked.awaitingRestart() && !missed.contains(tracked)) {
                 waiting.add(tracked);
             }

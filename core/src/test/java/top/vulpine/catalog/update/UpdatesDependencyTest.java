@@ -15,6 +15,7 @@ import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.ServerTarget;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -73,6 +74,30 @@ class UpdatesDependencyTest {
         @Override
         public boolean isEnabled(Path jar) {
             return false;
+        }
+
+        @Override
+        public Path dataFolder() {
+            return directory;
+        }
+
+        @Override
+        public Path ownJar() {
+            return directory.resolve(ownFileName());
+        }
+
+        @Override
+        public String version() {
+            return "test";
+        }
+
+        @Override
+        public void async(Runnable task) {
+            task.run();
+        }
+
+        @Override
+        public void repeat(Runnable task, Duration period) {
         }
 
     }

@@ -4,6 +4,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.plugin.Plugin;
+import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.CatalogAction;
 import top.vulpine.catalog.history.HistoryEntry;
 import top.vulpine.catalog.modrinth.ModrinthException;
@@ -21,7 +22,9 @@ import java.util.List;
  */
 public final class EnableCheck implements Listener {
 
-    private final CatalogPaper plugin;
+    private final CatalogPaper paper;
+
+    private final Catalog catalog;
 
     private boolean started;
     private boolean scanned;
@@ -29,8 +32,9 @@ public final class EnableCheck implements Listener {
 
     private volatile List<Failure> failures = List.of();
 
-    public EnableCheck(CatalogPaper plugin) {
-        this.plugin = plugin;
+    public EnableCheck(CatalogPaper paper, Catalog catalog) {
+        this.paper = paper;
+        this.catalog = catalog;
     }
 
     /**
@@ -58,7 +62,7 @@ public final class EnableCheck implements Listener {
         List<Failure> still = new ArrayList<>();
 
         for (Failure failure : failures) {
-            if (!plugin.isEnabled(plugin.pluginsFolder().resolve(failure.plugin().fileName()))) {
+            if (!catalog.getPlatform().isEnabled(catalog.getPlatform().pluginsFolder().resolve(failure.plugin().fileName()))) {
                 still.add(failure);
             }
         }
@@ -105,18 +109,18 @@ public final class EnableCheck implements Listener {
             done = true;
         }
 
-        plugin.getScheduler().runAsync(task -> check());
+        catalog.getPlatform().async(this::check);
     }
 
     private void check() {
 
         List<Failure> found = new ArrayList<>();
 
-        for (TrackedPlugin tracked : plugin.getLibrary().applied()) {
+        for (TrackedPlugin tracked : catalog.getLibrary().applied()) {
             check(tracked, true, found);
         }
 
-        for (TrackedPlugin tracked : plugin.getLibrary().loaded()) {
+        for (TrackedPlugin tracked : catalog.getLibrary().loaded()) {
             check(tracked, false, found);
         }
 
@@ -125,13 +129,13 @@ public final class EnableCheck implements Listener {
 
     private void check(TrackedPlugin tracked, boolean updated, List<Failure> found) {
 
-        String name = plugin.getLibrary().declaredName(tracked);
+        String name = catalog.getLibrary().declaredName(tracked);
 
         if (name == null) {
             return;
         }
 
-        Plugin running = plugin.getServer().getPluginManager().getPlugin(name);
+        Plugin running = paper.getServer().getPluginManager().getPlugin(name);
         String reason = running == null ? "not loaded"
                 : !running.isEnabled() ? "disabled during startup" : null;
 
@@ -143,7 +147,7 @@ public final class EnableCheck implements Listener {
                 updated && tracked.canRollBack() && removed(tracked.previousVersionId()));
 
         found.add(failure);
-        plugin.getHistory().add(HistoryEntry.notEnabled(tracked, updated, reason));
+        catalog.getHistory().add(HistoryEntry.notEnabled(tracked, updated, reason));
 
         Logger.warn(CatalogAction.UPDATE, tracked.displayName() + " " + tracked.versionNumber()
                 + " did not enable after the " + (updated ? "update" : "install") + "."
@@ -157,7 +161,7 @@ public final class EnableCheck implements Listener {
     private boolean removed(String versionId) {
 
         try {
-            plugin.getModrinth().version(versionId).join();
+            catalog.getModrinth().version(versionId).join();
             return false;
         } catch (Exception e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;

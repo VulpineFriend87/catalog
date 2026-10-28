@@ -7,74 +7,31 @@ import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import lombok.Getter;
 import org.bstats.bukkit.Metrics;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.bukkit.BukkitLamp;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
-import top.vulpine.catalog.install.DependencyResolver;
-import top.vulpine.catalog.history.Event;
-import top.vulpine.catalog.jar.model.InstalledJar;
-import top.vulpine.catalog.history.History;
-import top.vulpine.catalog.history.HistoryEntry;
-import top.vulpine.catalog.install.Downloader;
-import top.vulpine.catalog.install.Installer;
-import top.vulpine.catalog.install.InstallException;
-import top.vulpine.catalog.modrinth.GameVersions;
-import top.vulpine.catalog.modrinth.ModrinthClient;
-import top.vulpine.catalog.modrinth.Projects;
-import top.vulpine.catalog.modrinth.model.ModrinthProject;
-import top.vulpine.catalog.modrinth.model.ModrinthVersion;
-import top.vulpine.catalog.modrinth.model.ReleaseChannel;
-import top.vulpine.catalog.modrinth.model.SearchResults;
-import top.vulpine.catalog.paper.command.ClickContext;
+import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.CatalogAction;
 import top.vulpine.catalog.paper.command.ClickCommand;
+import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.MainCommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.config.Config;
 import top.vulpine.catalog.paper.notify.JoinNotifier;
 import top.vulpine.catalog.paper.util.PermissionChecker;
-import top.vulpine.catalog.platform.ExitTasks;
-import top.vulpine.catalog.platform.Platform;
-import top.vulpine.catalog.tracking.Dependents;
-import top.vulpine.catalog.tracking.IgnoreList;
-import top.vulpine.catalog.tracking.Library;
-import top.vulpine.catalog.tracking.Settings;
-import top.vulpine.catalog.tracking.TrackingException;
-import top.vulpine.catalog.tracking.TrackingStore;
-import top.vulpine.catalog.tracking.model.TrackedPlugin;
-import top.vulpine.catalog.tracking.model.TrackingDefaults;
-import top.vulpine.catalog.trash.Removals;
-import top.vulpine.catalog.trash.TrashBin;
-import top.vulpine.catalog.trash.model.TrashEntry;
-import top.vulpine.catalog.update.Updates;
-import top.vulpine.catalog.update.model.ServerPlatform;
-import top.vulpine.catalog.update.model.ServerTarget;
-import top.vulpine.catalog.update.model.UpdateCandidate;
-import top.vulpine.commons.log.LogAction;
 import top.vulpine.commons.log.LogLevel;
 import top.vulpine.commons.log.Logger;
 import top.vulpine.commons.text.Colorize;
 import top.vulpine.commons.text.Dialect;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.security.CodeSource;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Catalog for Paper, Purpur, and Folia.
  */
 @Getter
-public final class CatalogPaper extends JavaPlugin implements Platform {
+public final class CatalogPaper extends JavaPlugin {
 
     private static final String MODRINTH = "https://modrinth.com/plugin/catalog";
 
@@ -86,34 +43,8 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
 
     private Config configuration;
     private FoliaLib foliaLib;
-    private ModrinthClient modrinth;
-
-    /** Every Minecraft version Modrinth knows, loaded the first time it is needed. */
-    private volatile GameVersions gameVersions;
-    private TrackingStore tracking;
-    private IgnoreList ignored;
-    private Downloader downloader;
-    private TrashBin trash;
-    private Settings settings;
-    private Projects projects;
-    private ExitTasks exitTasks;
-    private Removals removals;
-    private Installer installer;
-    private Updates updates;
-    private Library library;
-    private Dependents dependents;
-    private History history;
+    private Catalog catalog;
     private EnableCheck enableCheck;
-
-    /**
-     * When this server came up.
-     */
-    private final Instant startedAt = Instant.now();
-
-
-    private enum Action implements LogAction {
-        CONFIG, SETUP, SCAN, TRACK, UPDATE
-    }
 
     @Override
     public void onEnable() {
@@ -142,7 +73,7 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
         }
 
         this.foliaLib = new FoliaLib(this);
-        Logger.debug(Action.SETUP, "Scheduling through FoliaLib, detected platform: "
+        Logger.debug(CatalogAction.SETUP, "Scheduling through FoliaLib, detected platform: "
                 + foliaLib.getImplType() + ".");
 
         String[] banner = {
@@ -161,37 +92,14 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
             Logger.system(line);
         }
 
-        this.modrinth = ModrinthClient.builder()
-                .userAgent("VulpineFriend87/Catalog/" + getDescription().getVersion() + " (vulpine.top)")
-                .token(configuration.modrinth.token)
-                .cacheDirectory(getDataFolder().toPath().resolve("cache"))
-                .build();
+        this.catalog = new Catalog(new PaperPlatform(this, foliaLib.getScheduler(), getFile().toPath()),
+                () -> configuration);
+        this.enableCheck = new EnableCheck(this, catalog);
 
-        if (!loadState()) {
+        if (!catalog.start(enableCheck::scanned)) {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-
-        Path data = getDataFolder().toPath();
-        this.downloader = new Downloader(modrinth, data.resolve("staging"));
-        this.trash = new TrashBin(data.resolve("trash"));
-        this.history = new History(data.resolve("data").resolve("history.json"));
-        this.history.load();
-
-        this.settings = new Settings(tracking, this::defaults, history);
-        this.projects = new Projects(this, modrinth, tracking);
-        this.exitTasks = new ExitTasks(data, getFile().toPath());
-        this.exitTasks.report();
-
-        this.removals = new Removals(this, trash, tracking, this::defaults, startedAt, history,
-                exitTasks);
-        this.installer = new Installer(this, downloader, tracking, removals, this::defaults, history);
-        this.updates = new Updates(this, modrinth, tracking, installer,
-                () -> configuration.tracking.defaults.soakMinutes, projects::dependenciesOf,
-                history, () -> library.index());
-        this.library = new Library(this, modrinth, tracking, ignored, this::defaults,
-                () -> configuration.tracking.autoTrack, history);
-        this.dependents = new Dependents(tracking, hashes -> modrinth.identify(hashes).join());
 
         Lamp<BukkitCommandActor> lamp = BukkitLamp.builder(this)
                 .permissionForAnnotation(RequiresPermission.class, annotation ->
@@ -200,21 +108,14 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
 
         ClickContext clicks = new ClickContext();
 
-        lamp.register(new MainCommand(this, clicks), new ClickCommand(clicks));
+        lamp.register(new MainCommand(this, catalog, clicks), new ClickCommand(clicks));
         clicks.dispatcher(lamp);
 
-        this.enableCheck = new EnableCheck(this);
         getServer().getPluginManager().registerEvents(enableCheck, this);
         getServer().getPluginManager().registerEvents(new JoinNotifier(this), this);
 
-        Logger.debug(Action.SETUP, "Initializing metrics...");
+        Logger.debug(CatalogAction.SETUP, "Initializing metrics...");
         new Metrics(this, PLUGIN_ID);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(exitTasks::run, "Catalog exit tasks"));
-
-        getScheduler().runAsync(task -> index());
-        getScheduler().runAsync(task -> pruneTrash());
-        scheduleUpdateChecks();
     }
 
     @Override
@@ -225,8 +126,8 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
             return;
         }
 
-        if (modrinth != null) {
-            modrinth.close();
+        if (catalog != null) {
+            catalog.stop();
         }
 
         if (foliaLib != null) {
@@ -256,7 +157,7 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
                 it.load(true);
             });
         } catch (Exception e) {
-            Logger.error(Action.CONFIG, "Failed to load configuration: " + e.getMessage());
+            Logger.error(CatalogAction.CONFIG, "Failed to load configuration: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -265,551 +166,8 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
         return true;
     }
 
-    private boolean loadState() {
-
-        Path data = getDataFolder().toPath().resolve("data");
-
-        tracking = new TrackingStore(data.resolve("tracked.json"));
-        ignored = new IgnoreList(data.resolve("ignored.json"));
-
-        try {
-            tracking.load();
-            ignored.load();
-        } catch (TrackingException e) {
-            Logger.error(Action.CONFIG, e.getMessage());
-            return false;
-        }
-
-        Logger.debug(Action.SETUP, "Loaded " + tracking.size() + " tracked plugins, "
-                + ignored.size() + " ignore entries.");
-
-        return true;
-    }
-
-    private void index() {
-
-        downloader.clean();
-
-        boolean indexed = library.index();
-        enableCheck.scanned();
-
-        if (indexed) {
-            checkForUpdates();
-        }
-    }
-
-    private void checkForUpdates() {
-        updates.check();
-    }
-
-    /**
-     * Asks again on a timer.
-     */
-    private void scheduleUpdateChecks() {
-
-        int minutes = configuration.updates.checkIntervalMinutes;
-
-        if (minutes <= 0) {
-            Logger.debug(Action.SETUP, "Periodic update checks are off.");
-            return;
-        }
-
-        getScheduler().runTimerAsync(this::checkForUpdates, minutes, minutes, TimeUnit.MINUTES);
-        Logger.debug(Action.SETUP, "Checking for updates every " + minutes + " minutes.");
-    }
-
-    /**
-     * Asks Modrinth what is out of date and remembers the answer.
-     *
-     * <p>Blocks, so it must be called off the main thread.</p>
-     *
-     * @return the available updates
-     */
-    public List<UpdateCandidate> refreshUpdates() {
-
-        try {
-            return updates.refresh();
-        } catch (TrackingException e) {
-            Logger.error(Action.TRACK, e.getMessage());
-            return updates.open();
-        }
-    }
-
-    public List<UpdateCandidate> updates() {
-        return updates.open();
-    }
-
-    public Map<String, UpdateCandidate> updatesByProject() {
-        return updates.byProject();
-    }
-
-    /**
-     * What Catalog has done, newest first.
-     *
-     * @param projectId only this plugin, or null for every plugin
-     * @param by        only this author, or null for everyone
-     * @return the matching entries
-     */
-    public List<HistoryEntry> history(String projectId, String by) {
-        return history.filter(projectId, by);
-    }
-
-    /**
-     * @param query what was typed
-     * @return the project id the history knows it by, or null if it has never mentioned it
-     */
-    public String loggedProjectId(String query) {
-        return history.projectIdFor(query);
-    }
-
-    /**
-     * @return every plugin the history mentions, for tab completion
-     */
-    public List<String> loggedPlugins() {
-        return history.plugins();
-    }
-
-    public List<DependencyResolver.Requirement> missingFor(ModrinthVersion version) {
-        return updates.missingFor(version);
-    }
-
-    /**
-     * The installed plugins that require this one.
-     *
-     * <p>Blocks, so it must be called off the main thread.</p>
-     *
-     * @param plugin the plugin about to be removed
-     * @return what would be left without a dependency
-     */
-    public List<TrackedPlugin> dependentsOf(TrackedPlugin plugin) {
-        return dependents.of(plugin);
-    }
-
-    /**
-     * Drops a staged build so the next restart leaves the plugin as it is.
-     *
-     * @param plugin the plugin to leave alone
-     * @return false when the staged file could not be deleted
-     */
-    public boolean cancelUpdate(TrackedPlugin plugin, String by) {
-
-        try {
-            return installer.cancel(plugin, by);
-        } catch (TrackingException e) {
-            Logger.error(Action.TRACK, e.getMessage());
-            return false;
-        }
-    }
-
-    public ModrinthVersion installTarget(String idOrSlug) {
-        return projects.installTarget(idOrSlug);
-    }
-
-    public static ModrinthVersion installTarget(List<ModrinthVersion> compatible) {
-        return Projects.installTarget(compatible);
-    }
-
-    public List<ModrinthVersion> compatibleVersions(String idOrSlug) {
-        return projects.compatibleVersions(idOrSlug);
-    }
-
-    public void stage(UpdateCandidate candidate, String by) {
-        saving(() -> installer.stage(candidate, by));
-    }
-
-    public void stage(TrackedPlugin plugin, ModrinthVersion version, String by, Event as) {
-        saving(() -> installer.stage(plugin, version, by, as));
-    }
-
-    /**
-     * Downloads a plugin that is not installed and puts it in the plugins folder.
-     *
-     * <p>Blocks, so it must be called off the main thread.</p>
-     *
-     * @param project the project being installed
-     * @param version the build to install
-     * @param channel the channel this plugin should follow from now on
-     * @param by      who asked, for the audit trail
-     * @return the new tracking record
-     */
-    public TrackedPlugin install(ModrinthProject project, ModrinthVersion version,
-                                 ReleaseChannel channel, String by) {
-        return install(List.of(new Pending(project, version, channel, true, null)), by).get(0);
-    }
-
-    /**
-     * Installs several builds together, or none of them.
-     *
-     * @param pending what to install, in the order it should be recorded
-     * @param by      who asked
-     * @return the tracking records, in the same order
-     * @throws InstallException if any download or check fails, having written nothing
-     */
-    public List<TrackedPlugin> install(List<Pending> pending, String by) {
-
-        List<Installer.Pending> work = new ArrayList<>();
-
-        for (Pending one : pending) {
-            work.add(new Installer.Pending(one.project(), one.version(), one.channel(),
-                    one.explicit(), one.requiredBy()));
-        }
-
-        try {
-            return installer.install(work, by);
-        } catch (TrackingException e) {
-            throw new InstallException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * A build about to be installed.
-     *
-     * @param explicit false when it is only here because something else named it, which is what
-     *                 lets a later autoremove offer it once nothing needs it
-     */
-    public record Pending(ModrinthProject project, ModrinthVersion version, ReleaseChannel channel,
-                          boolean explicit, String requiredBy) {
-    }
-
-    public DependencyResolver.Resolution dependenciesOf(ModrinthVersion version) {
-        return projects.dependenciesOf(version);
-    }
-
-    /**
-     * Moves a plugin's jar to the trash and stops tracking it.
-     *
-     * @param plugin the plugin to remove
-     * @param by     who asked
-     * @return what was binned, which identifies this exact removal so it can be undone, or null
-     *         if there was no file to bin
-     */
-    public TrashBin.Result uninstall(TrackedPlugin plugin, String by) {
-
-        if (!removals.cancelStagedFor(plugin)) {
-            Logger.warn(Action.UPDATE, "A downloaded update for " + plugin.displayName()
-                    + " is still in the update folder and should be deleted by hand.");
-        }
-
-        try {
-            return removals.uninstall(plugin, by);
-        } catch (TrackingException e) {
-            throw new InstallException(e.getMessage(), e);
-        }
-    }
-
-    public List<TrashEntry> trashed() {
-        return removals.list();
-    }
-
-    public TrashEntry trashed(String storedAs) {
-        return removals.find(storedAs);
-    }
-
-    /**
-     * Puts a removed plugin back and starts tracking it again.
-     *
-     * @param entry what to restore
-     * @param by    who asked
-     * @return the plugin Catalog is tracking again, or null if it was never tracked to begin with
-     * @throws InstallException if the jar is gone, or something already occupies its file name
-     */
-    public TrackedPlugin restore(TrashEntry entry, String by) {
-
-        try {
-            return removals.restore(entry, by);
-        } catch (TrackingException e) {
-            throw new InstallException(e.getMessage(), e);
-        }
-    }
-
-    public void discardTrashed(TrashEntry entry, String by) {
-        removals.discard(entry, by);
-    }
-
-    public int emptyTrash(String by) {
-        return removals.empty(by);
-    }
-
-    /**
-     * Drops removals older than the configured window.
-     */
-    private void pruneTrash() {
-
-        int days = configuration.trash.retentionDays;
-        int dropped = removals.prune(days);
-
-        if (dropped > 0) {
-            Logger.debug(Action.SETUP, "Emptied " + dropped + " removals older than "
-                    + days + " days from the trash.");
-        }
-    }
-
-    public void setChannel(TrackedPlugin plugin, ReleaseChannel channel, String by) {
-        saving(() -> settings.channel(plugin, channel, by));
-    }
-
-    public void setAutoUpdate(TrackedPlugin plugin, boolean on, String by) {
-        saving(() -> settings.autoUpdate(plugin, on, by));
-    }
-
-    public void setSoak(TrackedPlugin plugin, int minutes, String by) {
-        saving(() -> settings.soak(plugin, minutes, by));
-    }
-
-    public int defaultSoakMinutes() {
-        return settings.defaultSoakMinutes();
-    }
-
-    public void setHeld(TrackedPlugin plugin, boolean held, String by) {
-        saving(() -> settings.held(plugin, held, by));
-    }
-
-    /**
-     * Stops managing a plugin. The jar is not touched.
-     *
-     * @param plugin the plugin to untrack
-     * @param by     who asked
-     */
-    public void untrack(TrackedPlugin plugin, String by) {
-        library.untrack(plugin, by);
-
-        // The scan is what fills the untracked list, so without it the plugin would vanish from
-        // every screen until the next restart.
-        library.index();
-    }
-
-    /**
-     * Puts a jar back under management and rescans, so it appears without a restart.
-     *
-     * @param jar the file to stop ignoring
-     * @return true if it was ignored and now is not
-     */
-    public boolean track(InstalledJar jar, String by) {
-
-        if (!library.track(jar, by)) {
-            return false;
-        }
-
-        library.index(by);
-        return true;
-    }
-
-    /**
-     * @return the jars Catalog could manage but is not
-     */
-    public List<InstalledJar> untracked() {
-        return library.untracked();
-    }
-
-
-    /**
-     * The loaders this server can use, for showing which of a project's loaders apply here.
-     *
-     * @return the loader names, most specific first
-     */
-    public List<String> platformLoaders() {
-        return target().loaders();
-    }
-
-    /**
-     * The jar Catalog is running from.
-     *
-     * @return the file name of Catalog's own jar
-     */
-    public String ownFileName() {
-        return getFile().getName();
-    }
-
-    /**
-     * @param plugin the tracked plugin to test
-     * @return true if this record is Catalog itself
-     */
-    public boolean isSelf(TrackedPlugin plugin) {
-        return plugin != null && ownFileName().equals(plugin.fileName());
-    }
-
-    /**
-     * @return the exact Minecraft version this server runs
-     */
-    public String gameVersion() {
-        return getServer().getMinecraftVersion();
-    }
-
-    public List<ModrinthVersion> allVersions(String idOrSlug) {
-        return projects.allVersions(idOrSlug);
-    }
-
-    /**
-     * Blocks on Modrinth the first time, so it must be called off the main thread.
-     *
-     * @return what writes Minecraft versions the way Modrinth shows them
-     */
-    public GameVersions gameVersions() {
-
-        if (gameVersions == null) {
-            try {
-                gameVersions = new GameVersions(modrinth.gameVersions().join());
-            } catch (Exception e) {
-                // Shown as declared until Modrinth answers.
-                return new GameVersions(List.of());
-            }
-        }
-
-        return gameVersions;
-    }
-
-    private void saveTracking() {
-        saving(() -> tracking.save());
-    }
-
-    /**
-     * Runs core work that writes the tracking file, reporting a failure rather than throwing it.
-     */
-    private void saving(Save work) {
-
-        try {
-            work.run();
-        } catch (TrackingException e) {
-            Logger.error(Action.TRACK, e.getMessage());
-        }
-    }
-
-    @FunctionalInterface
-    private interface Save {
-        void run() throws TrackingException;
-    }
-
-    public SearchResults search(String query, int limit, int offset) {
-        return projects.search(query, limit, offset);
-    }
-
-    public ModrinthProject project(String idOrSlug) {
-        return projects.project(idOrSlug);
-    }
-
-    @Override
-    public ServerTarget target() {
-
-        return ServerTarget.builder()
-                .platform(detectPlatform())
-                .gameVersion(getServer().getMinecraftVersion())
-                .javaVersion(Runtime.version().feature())
-                .build();
-    }
-
-    private static ServerPlatform detectPlatform() {
-
-        if (isPresent("io.papermc.paper.threadedregions.RegionizedServer")) {
-            return ServerPlatform.FOLIA;
-        }
-
-        if (isPresent("org.purpurmc.purpur.PurpurConfig")) {
-            return ServerPlatform.PURPUR;
-        }
-
-        return ServerPlatform.PAPER;
-    }
-
-    private static boolean isPresent(String className) {
-
-        try {
-            Class.forName(className);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    private TrackingDefaults defaults() {
-
-        Config.Tracking.Defaults configured = configuration.tracking.defaults;
-
-        return TrackingDefaults.builder()
-                .channel(configured.channel)
-                .autoUpdate(configured.autoUpdate)
-                .soakMinutes(configured.soakMinutes)
-                .build();
-    }
-
-    /**
-     * The folder Catalog manages, which is the parent of its own data folder.
-     *
-     * @return the plugins folder
-     */
-    public Path pluginsFolder() {
-        return getDataFolder().getParentFile().toPath();
-    }
-
     public PlatformScheduler getScheduler() {
         return foliaLib.getScheduler();
-    }
-
-    @Override
-    public String stagingName() {
-        return getServer().getUpdateFolderFile().getName();
-    }
-
-    @Override
-    public void applyAtRestart(Path staged, String fileName) {
-
-        Path folder = getServer().getUpdateFolderFile().toPath();
-
-        try {
-            Files.createDirectories(folder);
-            Files.move(staged, folder.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new InstallException("Could not prepare the update: " + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    public boolean isEnabled(Path jar) {
-
-        Path wanted = jar.toAbsolutePath().normalize();
-
-        for (Plugin running : getServer().getPluginManager().getPlugins()) {
-            if (running.isEnabled() && wanted.equals(jarOf(running))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return the jar a plugin's classes were loaded from, or null when it cannot be told
-     */
-    private static Path jarOf(Plugin plugin) {
-
-        try {
-            CodeSource source = plugin.getClass().getProtectionDomain().getCodeSource();
-            return source == null ? null : Path.of(source.getLocation().toURI()).toAbsolutePath().normalize();
-        } catch (URISyntaxException | IllegalArgumentException | SecurityException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Clears the restart fresh installs are waiting for once something else has enabled them.
-     */
-    public void noticeLoaded() {
-        saving(library::noticeLoaded);
-    }
-
-    @Override
-    public boolean isStaged(String fileName) {
-        return Files.exists(getServer().getUpdateFolderFile().toPath().resolve(fileName));
-    }
-
-    @Override
-    public boolean cancelStaged(String fileName) {
-
-        try {
-            Files.deleteIfExists(getServer().getUpdateFolderFile().toPath().resolve(fileName));
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
     }
 
     private static boolean isPaper() {

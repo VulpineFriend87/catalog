@@ -3,6 +3,7 @@ package top.vulpine.catalog.platform;
 import top.vulpine.catalog.update.model.ServerTarget;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
 /**
  * What Catalog needs from the server it runs on.
@@ -60,5 +61,30 @@ public interface Platform {
      * @return true if a plugin loaded from it is enabled right now
      */
     boolean isEnabled(Path jar);
+
+    /**
+     * @return the folder Catalog keeps its own files in
+     */
+    Path dataFolder();
+
+    /**
+     * @return Catalog's own jar
+     */
+    Path ownJar();
+
+    /**
+     * @return Catalog's version
+     */
+    String version();
+
+    /**
+     * Runs a task off the main thread.
+     */
+    void async(Runnable task);
+
+    /**
+     * Runs a task off the main thread, every {@code period} after the first.
+     */
+    void repeat(Runnable task, Duration period);
 
 }
