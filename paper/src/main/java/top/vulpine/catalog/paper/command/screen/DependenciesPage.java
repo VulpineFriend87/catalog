@@ -7,8 +7,8 @@ import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
-import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Permitted;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.paper.command.Trail;
 
 import java.util.ArrayList;
@@ -29,7 +29,7 @@ public final class DependenciesPage {
                                                List<DependencyResolver.Requirement> rows, String from) {
 
         String key = project.slug();
-        String here = Trail.within(ClickContext.dependencies(key, version.id()), from);
+        String here = Trail.within(new Screen.DependenciesScreen(key, version.id()).token(), from);
 
         List<Component> out = new ArrayList<>();
 

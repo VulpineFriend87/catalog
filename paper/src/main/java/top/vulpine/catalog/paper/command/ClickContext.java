@@ -40,41 +40,6 @@ public final class ClickContext {
     /** Stands in for the screen when a button was not offered from one. */
     private static final String NOWHERE = "-";
 
-    /** The screen showing every managed plugin. */
-    public static final String LIST = "list";
-
-    /** The screen showing what has been removed. */
-    public static final String TRASH = "trash";
-
-    /** One project's page, followed by its slug. */
-    public static final String INFO = "info:";
-
-    /** One project's settings, followed by its slug. */
-    public static final String SETTINGS = "settings:";
-
-    /** One build's dependencies, followed by the project's slug, {@code @}, and the version id. */
-    public static final String DEPENDENCIES = "deps:";
-
-    /**
-     * The screen showing one build's dependencies.
-     */
-    public static String dependencies(String slug, String versionId) {
-        return DEPENDENCIES + slug + (versionId == null ? "" : "@" + versionId);
-    }
-
-    /**
-     * @param screen a token from {@link #dependencies}
-     * @return the slug, then the version id or null
-     */
-    public static String[] dependenciesOf(String screen) {
-
-        String about = screen.substring(DEPENDENCIES.length());
-        int at = about.indexOf('@');
-
-        return at < 0 ? new String[]{about, null}
-                : new String[]{about.substring(0, at), about.substring(at + 1)};
-    }
-
     /**
      * Marks a payload as coming from a confirmation button, wrapping the screen to return to.
      *
@@ -86,32 +51,6 @@ public final class ClickContext {
 
     /** Marks an install, update or switch that leaves what it requires unmet. */
     public static final String ALONE = "alone:";
-
-    /**
-     * The screen asking before an install, update or switch, followed by the verb, the project's
-     * slug, and {@code @} with the version id when the build was named.
-     */
-    public static final String CHANGE = "do:";
-
-    public static String change(String verb, String slug, String versionId) {
-        return CHANGE + verb + ":" + slug + (versionId == null ? "" : "@" + versionId);
-    }
-
-    /**
-     * @param screen a token from {@link #change}
-     * @return the verb, the slug, then the version id or null
-     */
-    public static String[] changeOf(String screen) {
-
-        String rest = screen.substring(CHANGE.length());
-        int colon = rest.indexOf(':');
-        String verb = rest.substring(0, colon);
-        String about = rest.substring(colon + 1);
-        int at = about.indexOf('@');
-
-        return at < 0 ? new String[]{verb, about, null}
-                : new String[]{verb, about.substring(0, at), about.substring(at + 1)};
-    }
 
     private final Map<String, String> pending = new ConcurrentHashMap<>();
 

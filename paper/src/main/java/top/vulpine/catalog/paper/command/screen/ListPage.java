@@ -8,6 +8,7 @@ import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.ListFilter;
 import top.vulpine.catalog.paper.command.Permitted;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
@@ -42,7 +43,7 @@ public final class ListPage {
                                        Set<ListFilter> filters, Instant checkedAt,
                                        String unreachable) {
 
-        String screen = ListFilter.screen(filters);
+        String screen = new Screen.ListScreen(filters).token();
         List<TrackedPlugin> ordered = new ArrayList<>();
 
         for (TrackedPlugin plugin : plugins) {

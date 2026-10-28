@@ -9,8 +9,8 @@ import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
-import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Permitted;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.ArrayList;
@@ -207,7 +207,7 @@ public final class VersionsPage {
         }
 
         // Choosing a build returns to the screen the list was opened from.
-        String here = from != null ? from : ClickContext.INFO + project.slug();
+        String here = from != null ? from : new Screen.InfoScreen(project.slug()).token();
 
         // While a build is waiting, the installed row is the way back out of it.
         String command = staged ? null

@@ -4,8 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
-import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Permitted;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.paper.command.Trail;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
@@ -29,7 +29,7 @@ public final class SettingsPage {
     public static List<Component> settings(TrackedPlugin plugin, int defaultSoak, String from) {
 
         String key = key(plugin);
-        String here = Trail.within(ClickContext.SETTINGS + key, from);
+        String here = Trail.within(new Screen.SettingsScreen(key).token(), from);
 
         List<Component> out = new ArrayList<>();
 

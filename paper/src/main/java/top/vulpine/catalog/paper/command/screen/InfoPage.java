@@ -9,8 +9,8 @@ import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
-import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Permitted;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.UpdateChecker;
 
@@ -259,7 +259,7 @@ public final class InfoPage {
                                               ModrinthVersion offered, boolean declares) {
 
         String key = project.slug();
-        String here = ClickContext.INFO + key;
+        String here = new Screen.InfoScreen(key).token();
 
         List<Component> row = new ArrayList<>();
 
@@ -287,7 +287,7 @@ public final class InfoPage {
         }
 
         String key = project.slug();
-        String here = ClickContext.INFO + key;
+        String here = new Screen.InfoScreen(key).token();
 
         List<Component> row = new ArrayList<>();
 
@@ -314,7 +314,7 @@ public final class InfoPage {
                                               boolean declares, boolean self) {
 
         String key = project.slug();
-        String here = ClickContext.INFO + key;
+        String here = new Screen.InfoScreen(key).token();
 
         List<Component> row = new ArrayList<>();
 

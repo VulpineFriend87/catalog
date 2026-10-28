@@ -6,13 +6,12 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
 import top.vulpine.catalog.paper.command.ClickContext;
-import top.vulpine.catalog.paper.command.ListFilter;
 import top.vulpine.catalog.paper.command.Press;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.paper.command.Trail;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import static top.vulpine.catalog.paper.command.screen.widget.Palette.*;
 
@@ -51,52 +50,14 @@ public final class Widgets {
      */
     public static String backTo(String from, String fallback) {
 
-        String screen = Trail.current(from);
-        String command = screen == null || screen.isEmpty() ? null : reopen(screen);
+        Screen screen = Screen.parse(Trail.current(from));
 
-        if (command == null) {
+        if (screen == null) {
             return fallback;
         }
 
         // A confirmation reopened from itself is redrawn, never confirmed.
-        return from(command, screen.startsWith(ClickContext.CHANGE) ? from : Trail.parent(from));
-    }
-
-    /**
-     * @param screen a screen token
-     * @return the command that opens it, or null when it is not a screen that can be reopened
-     */
-    private static String reopen(String screen) {
-
-        Set<ListFilter> filters = ListFilter.parse(screen);
-
-        if (filters != null) {
-            return "/catalog list" + ListFilter.switches(filters);
-        }
-
-        if (screen.equals(ClickContext.TRASH)) {
-            return "/catalog trash";
-        }
-
-        if (screen.startsWith(ClickContext.INFO)) {
-            return "/catalog info " + screen.substring(ClickContext.INFO.length());
-        }
-
-        if (screen.startsWith(ClickContext.SETTINGS)) {
-            return "/catalog settings " + screen.substring(ClickContext.SETTINGS.length());
-        }
-
-        if (screen.startsWith(ClickContext.DEPENDENCIES)) {
-            String[] about = ClickContext.dependenciesOf(screen);
-            return "/catalog dependencies " + about[0] + (about[1] == null ? "" : " " + about[1]);
-        }
-
-        if (screen.startsWith(ClickContext.CHANGE)) {
-            String[] change = ClickContext.changeOf(screen);
-            return "/catalog " + change[0] + " " + change[1] + (change[2] == null ? "" : " " + change[2]);
-        }
-
-        return null;
+        return from(screen.reopen(), screen instanceof Screen.ChangeScreen ? from : Trail.parent(from));
     }
 
     public static Component buttons(List<Component> row) {

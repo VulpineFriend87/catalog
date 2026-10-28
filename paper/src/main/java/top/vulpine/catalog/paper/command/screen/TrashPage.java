@@ -4,8 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextDecoration;
-import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Press;
+import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.trash.model.TrashEntry;
 
 import java.util.ArrayList;
@@ -79,7 +79,7 @@ public final class TrashPage {
                     "Page " + (shown + 1))).append(Component.space());
         }
 
-        footer.append(button("Empty", from("/catalog trash delete all", ClickContext.TRASH),
+        footer.append(button("Empty", from("/catalog trash delete all", new Screen.TrashScreen().token()),
                         DANGER, "Delete everything in the trash"))
                 .append(Component.space())
                 .append(button("Plugins", "/catalog list", MUTED, "Back to the plugin list"));
@@ -111,11 +111,11 @@ public final class TrashPage {
                         : Component.text("  " + entry.versionNumber(), MUTED))
                 .append(Component.text("  " + ago(entry.removedAt()), MUTED))
                 .append(Component.space())
-                .append(button("Restore", restoreCommand(entry, ClickContext.TRASH), BRAND,
+                .append(button("Restore", restoreCommand(entry, new Screen.TrashScreen().token()), BRAND,
                         "Put " + entry.displayName() + " back"))
                 .append(Component.space())
                 .append(icon("×", DANGER, from("/catalog trash delete " + entry.storedAs(),
-                                ClickContext.TRASH),
+                                new Screen.TrashScreen().token()),
                         "Delete " + entry.displayName() + " permanently"))
                 .build();
     }
@@ -144,7 +144,7 @@ public final class TrashPage {
         out.add(line()
                 .append(Component.text(INDENT))
                 .append(button("Confirm", confirming("/catalog trash delete all",
-                                Press.on(ClickContext.TRASH)),
+                                Press.on(new Screen.TrashScreen().token())),
                         DANGER, "Delete them now"))
                 .append(Component.space())
                 .append(button("Cancel", "/catalog trash", MUTED, "Keep them"))

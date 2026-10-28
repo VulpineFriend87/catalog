@@ -158,7 +158,7 @@ public final class MainCommand {
 
         // A button on the list only changes the filters, so the answer from Modrinth it already
         // showed is still the current one.
-        boolean refresh = ListFilter.parse(context.take(sender)) == null;
+        boolean refresh = !(Screen.parse(context.take(sender)) instanceof Screen.ListScreen);
 
         Set<ListFilter> filters = EnumSet.noneOf(ListFilter.class);
 
@@ -263,7 +263,7 @@ public final class MainCommand {
                     ? defaultChannel() : version.versionType();
 
             DependencyResolver.Resolution resolution = catalog.dependenciesOf(version);
-            String here = ClickContext.change("install", project.slug(), version.id());
+            String here = new Screen.ChangeScreen("install", project.slug(), version.id()).token();
 
             boolean asks = tracked != null || notFor != null || needsAnswer(resolution)
                     || redrawing(data, here);
@@ -633,7 +633,7 @@ public final class MainCommand {
             // Asks when the new build has missing requirements.
             if (project != null) {
 
-                String here = ClickContext.change("update", project.slug(), null);
+                String here = new Screen.ChangeScreen("update", project.slug(), null).token();
 
                 if ((needsAnswer(resolution) || redrawing(data, here)) && !confirmed(sender,
                         "update:" + project.id() + ":" + candidate.version().id(), data)) {
@@ -927,7 +927,7 @@ public final class MainCommand {
         // Its buttons lead to where it was asked from, not back here.
         if (asked != null && here.equals(Trail.current(asked.screen()))) {
             String parent = Trail.parent(asked.screen());
-            asked = Press.on(parent != null ? parent : ClickContext.INFO + project.slug());
+            asked = Press.on(parent != null ? parent : new Screen.InfoScreen(project.slug()).token());
         }
 
         String from = installed == null ? null : installed.versionNumber();
@@ -1259,46 +1259,74 @@ public final class MainCommand {
      */
     private void redraw(CommandSender sender, String data) {
 
-        String screen = Trail.current(data);
-        String from = Trail.parent(data);
+        Screen screen = Screen.parse(Trail.current(data));
 
-        if (screen == null) {
-            return;
+        if (screen != null) {
+            screen.accept(new Redraw(sender, data));
+        }
+    }
+
+    /**
+     * Draws one screen again, with the trail it was opened from.
+     *
+     * @param data the trail of the screen
+     */
+    private final class Redraw implements Screen.Visitor {
+
+        private final CommandSender sender;
+
+        private final String data;
+
+        private Redraw(CommandSender sender, String data) {
+            this.sender = sender;
+            this.data = data;
         }
 
-        Set<ListFilter> filters = ListFilter.parse(screen);
+        @Override
+        public void list(Screen.ListScreen screen) {
+            showList(sender, true, screen.filters());
+        }
 
-        if (filters != null) {
-            showList(sender, true, filters);
-        } else if (screen.equals(ClickContext.TRASH)) {
+        @Override
+        public void trash(Screen.TrashScreen screen) {
             showTrash(sender, 1);
-        } else if (screen.startsWith(ClickContext.DEPENDENCIES)) {
-            String[] about = ClickContext.dependenciesOf(screen);
-            showDependencies(sender, about[0], about[1], from);
-        } else if (screen.startsWith(ClickContext.CHANGE)) {
+        }
 
-            String[] change = ClickContext.changeOf(screen);
+        @Override
+        public void info(Screen.InfoScreen screen) {
+            showProject(sender, screen.slug());
+        }
 
-            if (!change[0].equals("update")) {
-                runInstall(sender, change[1], change[2], true, data);
+        @Override
+        public void settings(Screen.SettingsScreen screen) {
+
+            TrackedPlugin tracked = resolve(screen.slug());
+
+            if (tracked != null) {
+                showSettings(sender, tracked, Trail.parent(data));
+            }
+        }
+
+        @Override
+        public void dependencies(Screen.DependenciesScreen screen) {
+            showDependencies(sender, screen.slug(), screen.versionId(), Trail.parent(data));
+        }
+
+        @Override
+        public void change(Screen.ChangeScreen screen) {
+
+            if (!screen.verb().equals("update")) {
+                runInstall(sender, screen.slug(), screen.versionId(), true, data);
                 return;
             }
 
-            TrackedPlugin tracked = resolve(change[1]);
+            TrackedPlugin tracked = resolve(screen.slug());
 
             if (tracked != null) {
                 runUpdate(sender, tracked, data);
             }
-        } else if (screen.startsWith(ClickContext.INFO)) {
-            showProject(sender, screen.substring(ClickContext.INFO.length()));
-        } else if (screen.startsWith(ClickContext.SETTINGS)) {
-
-            TrackedPlugin tracked = resolve(screen.substring(ClickContext.SETTINGS.length()));
-
-            if (tracked != null) {
-                showSettings(sender, tracked, from);
-            }
         }
+
     }
 
     /**
