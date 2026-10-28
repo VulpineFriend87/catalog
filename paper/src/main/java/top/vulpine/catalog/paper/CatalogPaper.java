@@ -374,12 +374,6 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
     }
 
     /**
-     * Drops a staged build so the next restart leaves the plugin as it is.
-     *
-     * @param plugin the plugin to leave alone
-     * @return false when the staged file could not be deleted
-     */
-    /**
      * The installed plugins that require this one.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
@@ -391,6 +385,12 @@ public final class CatalogPaper extends JavaPlugin implements Platform {
         return dependents.of(plugin);
     }
 
+    /**
+     * Drops a staged build so the next restart leaves the plugin as it is.
+     *
+     * @param plugin the plugin to leave alone
+     * @return false when the staged file could not be deleted
+     */
     public boolean cancelUpdate(TrackedPlugin plugin, String by) {
 
         try {

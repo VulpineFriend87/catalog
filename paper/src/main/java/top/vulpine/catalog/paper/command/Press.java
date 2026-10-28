@@ -3,14 +3,15 @@ package top.vulpine.catalog.paper.command;
 /**
  * Everything a button carries besides its command.
  *
- * @param screen    where the button was pressed, or null when it was not offered from a screen
+ * @param screen    the trail of the screen the button was pressed on, or null when it was not
+ *                  offered from a screen
  * @param confirmed whether this press is the answer to a confirmation
  * @param answer    {@link ClickContext#ALONE}, or null for the default of installing what is needed
  */
 public record Press(String screen, boolean confirmed, String answer) {
 
     /**
-     * @param screen where the button is being offered, or null
+     * @param screen the trail of the screen the button is offered from, or null
      * @return a plain press from that screen
      */
     public static Press on(String screen) {

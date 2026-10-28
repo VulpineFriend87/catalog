@@ -1095,7 +1095,7 @@ public final class Messages {
      *
      * @param untracked    whether the project's jar is in the plugins folder but untracked
      * @param incompatible whether builds for other Minecraft versions are included
-     * @param from         the screen the newest builds were opened from
+     * @param from         the trail the newest builds were opened from
      */
     public static List<Component> allVersions(ModrinthProject project, List<ModrinthVersion> versions,
                                               TrackedPlugin installed, boolean untracked,
@@ -1864,7 +1864,7 @@ public final class Messages {
      *
      * @param plugin     what is being removed
      * @param dependents the installed plugins that name it
-     * @param from       the screen the removal was asked from
+     * @param asked      the press that asked for the removal
      */
     public static List<Component> confirmRemove(TrackedPlugin plugin, List<TrackedPlugin> dependents,
                                                 Press asked) {

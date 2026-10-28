@@ -161,9 +161,6 @@ public final class Suggestions {
     }
 
     /**
-     * What to offer for a plugin argument: the name the plugin is listed under.
-     */
-    /**
      * Narrows a list of completions to what has been typed so far.
      *
      * <p>Brigadier filters literals on the client, but anything the server supplies is sent as it
@@ -225,6 +222,9 @@ public final class Suggestions {
         return names;
     }
 
+    /**
+     * What to offer for a plugin argument: the name the plugin is listed under.
+     */
     private static String suggestionFor(TrackedPlugin tracked) {
 
         String name = tracked.displayName();

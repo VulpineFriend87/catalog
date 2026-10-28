@@ -177,7 +177,7 @@ public final class ClickContext {
      * Wraps a command so that pressing it also says which screen it was pressed on.
      *
      * @param command the command to run, leading slash and all
-     * @param screen  the screen it is being offered from, or null when it is not from one
+     * @param screen  the trail of the screen it is offered from, or null when it is not from one
      * @return what the button should run
      */
     public static String press(String command, String screen) {

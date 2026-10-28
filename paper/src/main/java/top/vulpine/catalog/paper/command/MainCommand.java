@@ -895,9 +895,9 @@ public final class MainCommand {
     /**
      * Draws the screen that asks before an install, update or switch.
      *
-     * @param from    the version installed now, or null for a first install
-     * @param here    this screen, so a dependency installed from it comes back to it
-     * @param command what confirming runs
+     * @param installed the plugin as tracked now, or null for a first install
+     * @param here      this screen, so a dependency installed from it comes back to it
+     * @param command   what confirming runs
      */
     private void showChange(CommandSender sender, Change change, ModrinthProject project,
                             TrackedPlugin installed, ModrinthVersion version, String notFor,
