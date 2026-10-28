@@ -23,6 +23,7 @@ paper = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 velocity = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
+adventure-text-serializer-plain = { module = "net.kyori:adventure-text-serializer-plain", version.ref = "adventure" }
 
 okaeri-yaml-bukkit = { module = "eu.okaeri:okaeri-configs-yaml-bukkit", version.ref = "okaeri" }
 okaeri-yaml-snakeyaml = { module = "eu.okaeri:okaeri-configs-yaml-snakeyaml", version.ref = "okaeri" }

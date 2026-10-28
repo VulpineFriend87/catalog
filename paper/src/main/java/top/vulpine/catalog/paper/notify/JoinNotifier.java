@@ -4,9 +4,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import top.vulpine.catalog.command.flow.JoinNews;
 import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.PaperViewer;
-import top.vulpine.catalog.paper.command.flow.JoinNews;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;

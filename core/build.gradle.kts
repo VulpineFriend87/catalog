@@ -14,6 +14,7 @@ dependencies {
     testImplementation(libs.gson)
     testImplementation(libs.commons)
     testImplementation(libs.adventure.api)
+    testImplementation(libs.adventure.text.serializer.plain)
     testImplementation(libs.lamp.common)
     testRuntimeOnly(libs.paper)
     testRuntimeOnly(libs.junit.launcher)
