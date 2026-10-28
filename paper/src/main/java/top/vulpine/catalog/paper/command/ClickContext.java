@@ -1,12 +1,12 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
-import revxrsal.commands.Lamp;
-import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.command.CommandActor;
+import top.vulpine.catalog.platform.Viewer;
 
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 
 /**
  * Carries which screen a button was pressed on, without it ever being part of a real command.
@@ -57,10 +57,13 @@ public final class ClickContext {
     /**
      * Set once the tree exists, because the commands it holds are built with this in hand.
      */
-    private Lamp<BukkitCommandActor> lamp;
+    private BiConsumer<CommandActor, String> dispatch;
 
-    public void dispatcher(Lamp<BukkitCommandActor> lamp) {
-        this.lamp = lamp;
+    /**
+     * @param dispatch runs a command line, without its slash, inline through the command tree
+     */
+    public void dispatcher(BiConsumer<CommandActor, String> dispatch) {
+        this.dispatch = dispatch;
     }
 
     /**
@@ -68,9 +71,8 @@ public final class ClickContext {
      *
      * @param arguments everything after the wrapper: a screen, a space, then the real command
      */
-    public void press(BukkitCommandActor actor, String arguments) {
+    public void press(CommandActor actor, String arguments) {
 
-        CommandSender sender = actor.sender();
         String rest = arguments.trim();
         int space = rest.indexOf(' ');
 
@@ -82,12 +84,12 @@ public final class ClickContext {
         String command = rest.substring(space + 1).trim();
 
         // Nothing but Catalog's own commands, so typing the wrapper by hand is never a way to run
-        // something else. It would run as the sender either way, but there is no reason to allow it.
+        // something else. It would run as the viewer either way, but there is no reason to allow it.
         if (!isCatalog(command)) {
             return;
         }
 
-        String name = sender.getName();
+        String name = actor.name();
 
         if (NOWHERE.equals(screen)) {
             pending.remove(name);
@@ -100,7 +102,7 @@ public final class ClickContext {
         // can reason about; Lamp runs it inline, so it is read before this method returns and can
         // be cleared here.
         try {
-            lamp.dispatch(actor, command.substring(1));
+            dispatch.accept(actor, command.substring(1));
         } finally {
             pending.remove(name);
         }
@@ -124,13 +126,13 @@ public final class ClickContext {
     }
 
     /**
-     * Reads and forgets the screen for a sender.
+     * Reads and forgets the screen for a viewer.
      *
-     * @param sender who pressed the button
+     * @param viewer who pressed the button
      * @return the screen, or null if the command was typed
      */
-    public String take(CommandSender sender) {
-        return pending.remove(sender.getName());
+    public String take(Viewer viewer) {
+        return pending.remove(viewer.name());
     }
 
     /**

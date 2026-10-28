@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Optional;
@@ -11,6 +10,7 @@ import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.flow.Chat;
 import top.vulpine.catalog.paper.command.flow.Screens;
+import top.vulpine.catalog.platform.Viewer;
 
 /**
  * A project's page and what its builds declare.
@@ -32,21 +32,21 @@ public final class InfoCommand implements OrphanCommand {
     @Subcommand("info")
     @Description("Details for any plugin")
     @RequiresPermission("command.info")
-    public void info(CommandSender sender,
+    public void info(Viewer viewer,
                      @Named("plugin") @SuggestWith(Suggestions.Tracked.class) String query) {
-        chat.runAsync(sender, () -> screens.showProject(sender, query));
+        chat.runAsync(viewer, () -> screens.showProject(viewer, query));
     }
 
     @Subcommand("dependencies")
     @Description("What a plugin declares it needs")
     @RequiresPermission("command.info")
-    public void dependencies(CommandSender sender,
+    public void dependencies(Viewer viewer,
                              @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
                              @Optional @Named("version") String wanted) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
-        chat.runAsync(sender, () -> screens.showDependencies(sender, query, wanted, Press.screenOf(data)));
+        chat.runAsync(viewer, () -> screens.showDependencies(viewer, query, wanted, Press.screenOf(data)));
     }
 
 }

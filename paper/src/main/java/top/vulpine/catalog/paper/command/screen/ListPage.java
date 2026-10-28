@@ -5,10 +5,10 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.jar.model.InstalledJar;
-import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.ListFilter;
 import top.vulpine.catalog.paper.command.Permitted;
 import top.vulpine.catalog.paper.command.Screen;
+import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 

@@ -1,15 +1,14 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.CommandPlaceholder;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
-import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.screen.HelpPage;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
+import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;
 
@@ -20,28 +19,28 @@ import static top.vulpine.catalog.paper.command.flow.Chat.send;
  */
 public final class CatalogCommand implements OrphanCommand {
 
-    private final CatalogPaper paper;
+    private final Catalog catalog;
 
-    public CatalogCommand(CatalogPaper paper) {
-        this.paper = paper;
+    public CatalogCommand(Catalog catalog) {
+        this.catalog = catalog;
     }
 
     @CommandPlaceholder
     @Description("Information about Catalog")
     @RequiresPermission(CommandPermissions.ANY)
-    public void about(CommandSender sender) {
+    public void about(Viewer viewer) {
 
-        List<String> authors = paper.getDescription().getAuthors();
+        List<String> authors = catalog.getPlatform().authors();
 
-        send(sender, HelpPage.about(paper.getDescription().getVersion(),
+        send(viewer, HelpPage.about(catalog.getPlatform().version(),
                 authors.isEmpty() ? "Vulpine" : String.join(", ", authors)));
     }
 
     @Subcommand("help")
     @Description("Every command")
     @RequiresPermission(CommandPermissions.ANY)
-    public void help(CommandSender sender) {
-        send(sender, HelpPage.help(command -> Commands.PERMISSIONS.allows(sender, command)));
+    public void help(Viewer viewer) {
+        send(viewer, HelpPage.help(command -> Commands.PERMISSIONS.allows(viewer, command)));
     }
 
     /**
@@ -52,9 +51,9 @@ public final class CatalogCommand implements OrphanCommand {
     @Subcommand("reload")
     @Description("Reload the configuration")
     @RequiresPermission("command.reload")
-    public void reload(CommandSender sender) {
+    public void reload(Viewer viewer) {
 
-        send(sender, paper.loadConfiguration()
+        send(viewer, catalog.getPlatform().reload()
                 ? Outcomes.reloaded()
                 : Outcomes.configFailed());
     }

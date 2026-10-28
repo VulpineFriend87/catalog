@@ -13,8 +13,7 @@ import java.lang.annotation.Target;
  *
  * <p>The value is relative to the plugin root, so {@code command.list} resolves to
  * {@code catalog.command.list} and is checked through
- * {@link top.vulpine.catalog.paper.util.PermissionChecker}, which keeps wildcard and admin nodes
- * working.</p>
+ * {@link top.vulpine.catalog.platform.Viewer#has}.</p>
  */
 @DistributeOnMethods
 @NotSender.ImpliesNotSender

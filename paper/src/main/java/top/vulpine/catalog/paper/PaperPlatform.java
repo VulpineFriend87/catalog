@@ -15,7 +15,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.CodeSource;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /**
  * Paper, Purpur and Folia, as Catalog sees them.
@@ -29,10 +31,14 @@ public final class PaperPlatform implements Platform {
     /** The jar Catalog was loaded from. */
     private final Path ownJar;
 
-    public PaperPlatform(JavaPlugin plugin, PlatformScheduler scheduler, Path ownJar) {
+    /** Reads the configuration again, false when it could not be read. */
+    private final BooleanSupplier reload;
+
+    public PaperPlatform(JavaPlugin plugin, PlatformScheduler scheduler, Path ownJar, BooleanSupplier reload) {
         this.plugin = plugin;
         this.scheduler = scheduler;
         this.ownJar = ownJar;
+        this.reload = reload;
     }
 
     @Override
@@ -74,6 +80,25 @@ public final class PaperPlatform implements Platform {
     @Override
     public Path pluginsFolder() {
         return plugin.getDataFolder().getParentFile().toPath();
+    }
+
+    @Override
+    public String notEnabled(String name) {
+
+        Plugin running = plugin.getServer().getPluginManager().getPlugin(name);
+
+        return running == null ? "not loaded"
+                : !running.isEnabled() ? "disabled during startup" : null;
+    }
+
+    @Override
+    public boolean reload() {
+        return reload.getAsBoolean();
+    }
+
+    @Override
+    public List<String> authors() {
+        return plugin.getDescription().getAuthors();
     }
 
     @Override

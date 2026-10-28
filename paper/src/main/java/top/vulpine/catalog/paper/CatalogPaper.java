@@ -17,9 +17,9 @@ import top.vulpine.catalog.paper.command.ClickCommand;
 import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.Commands;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
+import top.vulpine.catalog.paper.command.flow.JoinNews;
 import top.vulpine.catalog.paper.config.Config;
 import top.vulpine.catalog.paper.notify.JoinNotifier;
-import top.vulpine.catalog.paper.util.PermissionChecker;
 import top.vulpine.commons.log.LogLevel;
 import top.vulpine.commons.log.Logger;
 import top.vulpine.commons.text.Colorize;
@@ -44,7 +44,6 @@ public final class CatalogPaper extends JavaPlugin {
     private Config configuration;
     private FoliaLib foliaLib;
     private Catalog catalog;
-    private EnableCheck enableCheck;
 
     @Override
     public void onEnable() {
@@ -92,28 +91,29 @@ public final class CatalogPaper extends JavaPlugin {
             Logger.system(line);
         }
 
-        this.catalog = new Catalog(new PaperPlatform(this, foliaLib.getScheduler(), getFile().toPath()),
+        this.catalog = new Catalog(new PaperPlatform(this, foliaLib.getScheduler(), getFile().toPath(),
+                this::loadConfiguration),
                 () -> configuration);
-        this.enableCheck = new EnableCheck(this, catalog);
-
-        if (!catalog.start(enableCheck::scanned)) {
+        if (!catalog.start()) {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         Lamp<BukkitCommandActor> lamp = BukkitLamp.builder(this)
+                .senderResolver(PaperViewer.RESOLVER)
                 .permissionForAnnotation(RequiresPermission.class, annotation ->
-                        actor -> PermissionChecker.hasPermission(actor.sender(), annotation.value()))
+                        actor -> new PaperViewer(actor.sender()).has(annotation.value()))
+                .dependency(Catalog.class, catalog)
                 .build();
 
         ClickContext clicks = new ClickContext();
 
-        lamp.register(new Commands(this, catalog, clicks).registries().toArray());
+        lamp.register(new Commands(catalog, clicks).registries().toArray());
         lamp.register(new ClickCommand(clicks));
-        clicks.dispatcher(lamp);
+        clicks.dispatcher((actor, line) -> lamp.dispatch((BukkitCommandActor) actor, line));
 
-        getServer().getPluginManager().registerEvents(enableCheck, this);
-        getServer().getPluginManager().registerEvents(new JoinNotifier(this), this);
+        getServer().getPluginManager().registerEvents(new ServerStarted(catalog.getEnableCheck()), this);
+        getServer().getPluginManager().registerEvents(new JoinNotifier(this, new JoinNews(catalog)), this);
 
         Logger.debug(CatalogAction.SETUP, "Initializing metrics...");
         new Metrics(this, PLUGIN_ID);

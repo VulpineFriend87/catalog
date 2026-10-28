@@ -1,12 +1,10 @@
 package top.vulpine.catalog.paper.command;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Subcommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.screen.widget.Widgets;
-import top.vulpine.catalog.paper.util.PermissionChecker;
+import top.vulpine.catalog.platform.Viewer;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -103,27 +101,27 @@ public final class CommandPermissions {
     }
 
     /**
-     * @return whether the sender may run the command
+     * @return whether the viewer may run the command
      */
-    public boolean allows(CommandSender sender, String command) {
+    public boolean allows(Viewer viewer, String command) {
         String node = nodeFor(command);
-        return node == null || PermissionChecker.hasPermission(sender, node);
+        return node == null || viewer.has(node);
     }
 
     /**
-     * A screen line as this sender can use it.
+     * A screen line as this viewer can use it.
      *
-     * @return the line, or null when it held only buttons the sender cannot use
+     * @return the line, or null when it held only buttons the viewer cannot use
      */
-    public Component shown(CommandSender sender, Component line) {
+    public Component shown(Viewer viewer, Component line) {
 
-        Component permitted = Permitted.filter(line, command -> allows(sender, command));
+        Component permitted = Permitted.filter(line, command -> allows(viewer, command));
 
         if (Permitted.isBlank(permitted) && !Permitted.isBlank(line)) {
             return null;
         }
 
-        return sender instanceof Player ? permitted : Widgets.typed(permitted);
+        return viewer.isPlayer() ? permitted : Widgets.typed(permitted);
     }
 
 }

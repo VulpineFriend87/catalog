@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Flag;
@@ -14,6 +13,7 @@ import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.flow.Chat;
 import top.vulpine.catalog.paper.command.screen.HistoryPage;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
+import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;
 
@@ -39,16 +39,16 @@ public final class HistoryCommand implements OrphanCommand {
     @Subcommand("history")
     @Description("What Catalog has done")
     @RequiresPermission("command.history")
-    public void history(CommandSender sender,
+    public void history(Viewer viewer,
                         @Optional @Flag(value = "plugin", shorthand = 'l')
                         @SuggestWith(Suggestions.Logged.class) String which,
                         @Optional @Flag("author") String author,
                         @Optional @Flag("event") @SuggestWith(Suggestions.Kinds.class) String event,
                         @Flag("page") @Default("1") int page) {
 
-        context.take(sender);
+        context.take(viewer);
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             String projectId = null;
             String label = null;
@@ -61,7 +61,7 @@ public final class HistoryCommand implements OrphanCommand {
                 projectId = catalog.loggedProjectId(which);
 
                 if (projectId == null) {
-                    send(sender, Outcomes.unknownPlugin(which));
+                    send(viewer, Outcomes.unknownPlugin(which));
                     return;
                 }
 
@@ -81,7 +81,7 @@ public final class HistoryCommand implements OrphanCommand {
                 HistoryKind kind = HistoryKind.named(event);
 
                 if (kind == null) {
-                    send(sender, Outcomes.unknownKind(event));
+                    send(viewer, Outcomes.unknownKind(event));
                     return;
                 }
 
@@ -90,7 +90,7 @@ public final class HistoryCommand implements OrphanCommand {
                 command.append(" --event ").append(kind.label());
             }
 
-            send(sender, HistoryPage.history(entries, Math.max(page, 1), label, command.toString()));
+            send(viewer, HistoryPage.history(entries, Math.max(page, 1), label, command.toString()));
         });
     }
 

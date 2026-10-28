@@ -77,6 +77,21 @@ class UpdatesDependencyTest {
         }
 
         @Override
+        public String notEnabled(String name) {
+            return null;
+        }
+
+        @Override
+        public boolean reload() {
+            return true;
+        }
+
+        @Override
+        public List<String> authors() {
+            return List.of();
+        }
+
+        @Override
         public Path dataFolder() {
             return directory;
         }

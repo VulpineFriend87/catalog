@@ -1,7 +1,7 @@
 package top.vulpine.catalog.paper.command.flow;
 
-import org.bukkit.command.CommandSender;
 import top.vulpine.catalog.paper.command.Press;
+import top.vulpine.catalog.platform.Viewer;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * What each sender has been asked to confirm.
+ * What each viewer has been asked to confirm.
  */
 public final class Confirmations {
 
@@ -25,8 +25,8 @@ public final class Confirmations {
      * navigates away, and without this the confirmation would still be armed, so pressing the same
      * remove button again inside the window would go straight through without asking.</p>
      */
-    public void abandon(CommandSender sender) {
-        asked.remove(sender.getName());
+    public void abandon(Viewer viewer) {
+        asked.remove(viewer.name());
     }
 
     /**
@@ -36,20 +36,20 @@ public final class Confirmations {
      * @param data   the payload the command arrived with, or null if it was typed
      * @return true to go ahead, false when the caller should show a confirmation instead
      */
-    public boolean confirmed(CommandSender sender, String action, String data) {
+    public boolean confirmed(Viewer viewer, String action, String data) {
 
         if (data != null) {
             return Press.of(data).confirmed();
         }
 
-        Pending pending = asked.get(sender.getName());
+        Pending pending = asked.get(viewer.name());
 
         if (pending != null && !pending.expired() && pending.action().equals(action)) {
-            asked.remove(sender.getName());
+            asked.remove(viewer.name());
             return true;
         }
 
-        asked.put(sender.getName(), new Pending(action, Instant.now()));
+        asked.put(viewer.name(), new Pending(action, Instant.now()));
         return false;
     }
 

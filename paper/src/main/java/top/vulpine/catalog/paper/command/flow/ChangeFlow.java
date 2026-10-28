@@ -1,7 +1,6 @@
 package top.vulpine.catalog.paper.command.flow;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.command.CommandSender;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.install.DependencyResolver;
@@ -15,6 +14,7 @@ import top.vulpine.catalog.paper.command.Press;
 import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
 import top.vulpine.catalog.paper.command.screen.widget.Format;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
@@ -59,7 +59,7 @@ public final class ChangeFlow {
      * @param incompatible whether builds for other Minecraft versions are accepted
      * @param data         what the button carried, or null when the command was typed
      */
-    public void runInstall(CommandSender sender, String query, String named, boolean incompatible,
+    public void runInstall(Viewer viewer, String query, String named, boolean incompatible,
                             String data) {
 
         try {
@@ -67,7 +67,7 @@ public final class ChangeFlow {
             ModrinthProject project = catalog.project(query);
 
             if (project == null) {
-                send(sender, Outcomes.unknownPlugin(query));
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -75,24 +75,24 @@ public final class ChangeFlow {
             InstalledJar untracked = tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null;
 
             if (untracked != null) {
-                send(sender, Outcomes.installedUntracked(project.title(), untracked.fileName()));
+                send(viewer, Outcomes.installedUntracked(project.title(), untracked.fileName()));
                 return;
             }
 
             if (tracked != null && named == null) {
-                send(sender, Outcomes.alreadyInstalled(tracked));
+                send(viewer, Outcomes.alreadyInstalled(tracked));
                 return;
             }
 
             if (tracked != null && tracked.isPinned()) {
-                send(sender, Outcomes.stillHeld(tracked.displayName()));
+                send(viewer, Outcomes.stillHeld(tracked.displayName()));
                 return;
             }
 
             ModrinthVersion version = lookup.build(project, named, incompatible);
 
             if (version == null) {
-                send(sender, named == null
+                send(viewer, named == null
                         ? Outcomes.noBuild(project.title())
                         : Outcomes.noVersion(project.title(), named));
                 return;
@@ -109,12 +109,12 @@ public final class ChangeFlow {
             boolean asks = tracked != null || notFor != null || needsAnswer(resolution)
                     || Press.redrawing(data, here);
 
-            if (asks && !confirmations.confirmed(sender, "install:" + project.id() + ":" + version.id(), data)) {
+            if (asks && !confirmations.confirmed(viewer, "install:" + project.id() + ":" + version.id(), data)) {
 
                 Change change = tracked == null ? Change.INSTALL
                         : isOlder(version, tracked) ? Change.ROLL_BACK : Change.SWITCH;
 
-                screens.showChange(sender, change, project, tracked, version, notFor, resolution, data, here,
+                screens.showChange(viewer, change, project, tracked, version, notFor, resolution, data, here,
                         "/catalog install " + project.slug() + " " + version.id()
                                 + (notFor != null ? " --incompatible" : ""));
                 return;
@@ -126,22 +126,22 @@ public final class ChangeFlow {
             if (tracked != null) {
 
                 if (!needed.isEmpty()) {
-                    catalog.install(needed, sender.getName());
+                    catalog.install(needed, viewer.name());
                 }
 
                 boolean rollback = isOlder(version, tracked);
 
-                catalog.setChannel(tracked, follow, sender.getName());
-                catalog.stage(tracked, version, sender.getName(),
+                catalog.setChannel(tracked, follow, viewer.name());
+                catalog.stage(tracked, version, viewer.name(),
                         rollback ? Event.ROLLED_BACK : Event.SWITCHED);
 
-                redraw.screen(sender, Press.screenOf(data));
-                send(sender, Outcomes.staged(tracked.displayName(), version.versionNumber()));
+                redraw.screen(viewer, Press.screenOf(data));
+                send(viewer, Outcomes.staged(tracked.displayName(), version.versionNumber()));
 
                 // Keeps the next check from downloading the newer build again.
                 if (rollback && tracked.autoUpdate()) {
-                    catalog.setAutoUpdate(tracked, false, sender.getName());
-                    send(sender, Outcomes.autoUpdateTurnedOff(tracked.versionNumber(), Format.key(tracked)));
+                    catalog.setAutoUpdate(tracked, false, viewer.name());
+                    send(viewer, Outcomes.autoUpdateTurnedOff(tracked.versionNumber(), Format.key(tracked)));
                 }
 
                 return;
@@ -149,16 +149,16 @@ public final class ChangeFlow {
 
             List<Installer.Pending> pending = new ArrayList<>(needed);
             pending.add(new Installer.Pending(project, version, follow, true, null));
-            catalog.install(pending, sender.getName());
+            catalog.install(pending, viewer.name());
 
-            redraw.screen(sender, Press.screenOf(data));
-            send(sender, pending.size() == 1
+            redraw.screen(viewer, Press.screenOf(data));
+            send(viewer, pending.size() == 1
                     ? Outcomes.installed(project.title(), version.versionNumber())
                     : Outcomes.installedWith(project.title(), version.versionNumber(),
                             needed.stream().map(one -> one.project().title()).toList()));
 
         } catch (Exception e) {
-            send(sender, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
         }
     }
 
@@ -181,14 +181,14 @@ public final class ChangeFlow {
      *
      * @param data what the button carried, or null when the command was typed
      */
-    public void runUpdate(CommandSender sender, TrackedPlugin tracked, String data) {
+    public void runUpdate(Viewer viewer, TrackedPlugin tracked, String data) {
 
         try {
 
             UpdateCandidate candidate = candidateFor(tracked);
 
             if (candidate == null) {
-                send(sender, Outcomes.noUpdate(tracked.displayName()));
+                send(viewer, Outcomes.noUpdate(tracked.displayName()));
                 return;
             }
 
@@ -200,10 +200,10 @@ public final class ChangeFlow {
 
                 String here = new Screen.ChangeScreen("update", project.slug(), null).token();
 
-                if ((needsAnswer(resolution) || Press.redrawing(data, here)) && !confirmations.confirmed(sender,
+                if ((needsAnswer(resolution) || Press.redrawing(data, here)) && !confirmations.confirmed(viewer,
                         "update:" + project.id() + ":" + candidate.version().id(), data)) {
 
-                    screens.showChange(sender, Change.UPDATE, project, tracked, candidate.version(), null,
+                    screens.showChange(viewer, Change.UPDATE, project, tracked, candidate.version(), null,
                             resolution, data, here,
                             "/catalog update " + project.slug());
                     return;
@@ -211,22 +211,22 @@ public final class ChangeFlow {
             }
 
             if (!Press.alone(data) && !resolution.missing().isEmpty()) {
-                catalog.install(pendingFor(resolution.missing(), project), sender.getName());
+                catalog.install(pendingFor(resolution.missing(), project), viewer.name());
             }
 
-            catalog.stage(candidate, sender.getName());
+            catalog.stage(candidate, viewer.name());
 
-            redraw.screen(sender, Press.screenOf(data));
-            send(sender, Outcomes.staged(tracked.displayName(), candidate.to()));
+            redraw.screen(viewer, Press.screenOf(data));
+            send(viewer, Outcomes.staged(tracked.displayName(), candidate.to()));
 
         } catch (Exception e) {
-            send(sender, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
         }
     }
 
-    public void updateAll(CommandSender sender, String data) {
+    public void updateAll(Viewer viewer, String data) {
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
@@ -234,7 +234,7 @@ public final class ChangeFlow {
                 List<UpdateCandidate> candidates = catalog.openUpdates();
 
                 if (candidates.isEmpty()) {
-                    send(sender, Outcomes.upToDate());
+                    send(viewer, Outcomes.upToDate());
                     return;
                 }
 
@@ -254,7 +254,7 @@ public final class ChangeFlow {
                             continue;
                         }
 
-                        catalog.stage(candidate, sender.getName());
+                        catalog.stage(candidate, viewer.name());
                         staged++;
                     } catch (Exception e) {
                         // One plugin failing is not a reason to abandon the rest of the queue, and
@@ -264,18 +264,18 @@ public final class ChangeFlow {
                     }
                 }
 
-                redraw.screen(sender, Press.screenOf(data));
+                redraw.screen(viewer, Press.screenOf(data));
 
                 if (staged > 0) {
-                    send(sender, Outcomes.stagedAll(staged));
+                    send(viewer, Outcomes.stagedAll(staged));
                 }
 
                 for (Component failure : failures) {
-                    send(sender, failure);
+                    send(viewer, failure);
                 }
 
             } catch (Exception e) {
-                send(sender, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
             }
         });
     }

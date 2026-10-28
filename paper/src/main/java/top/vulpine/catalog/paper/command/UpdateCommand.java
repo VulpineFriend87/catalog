@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Subcommand;
@@ -13,6 +12,7 @@ import top.vulpine.catalog.paper.command.flow.Chat;
 import top.vulpine.catalog.paper.command.flow.Lookup;
 import top.vulpine.catalog.paper.command.flow.Redraw;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import static top.vulpine.catalog.paper.command.flow.Chat.send;
@@ -46,57 +46,57 @@ public final class UpdateCommand implements OrphanCommand {
     @Subcommand("update")
     @Description("Download an update and apply it at the next restart")
     @RequiresPermission("command.update")
-    public void update(CommandSender sender,
+    public void update(Viewer viewer,
                        @Named("plugin") @SuggestWith(Suggestions.Updatable.class) String query) {
 
         String wanted = ClickContext.strip(query);
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
         if (wanted.equalsIgnoreCase("all")) {
-            changes.updateAll(sender, data);
+            changes.updateAll(viewer, data);
             return;
         }
 
         TrackedPlugin tracked = lookup.resolve(wanted);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(wanted));
+            send(viewer, Outcomes.unknownPlugin(wanted));
             return;
         }
 
-        chat.runAsync(sender, () -> changes.runUpdate(sender, tracked, data));
+        chat.runAsync(viewer, () -> changes.runUpdate(viewer, tracked, data));
     }
 
     @Subcommand("cancel")
     @Description("Drop a downloaded update")
     @RequiresPermission("command.update")
-    public void cancel(CommandSender sender,
+    public void cancel(Viewer viewer,
                        @Named("plugin") @SuggestWith(Suggestions.Tracked.class) String query) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
         if (!tracked.pendingRestart()) {
-            send(sender, Outcomes.nothingStaged(tracked.displayName()));
+            send(viewer, Outcomes.nothingStaged(tracked.displayName()));
             return;
         }
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
-            if (!catalog.cancelUpdate(tracked, sender.getName())) {
-                send(sender, Outcomes.failed("Could not delete the downloaded build for "
+            if (!catalog.cancelUpdate(tracked, viewer.name())) {
+                send(viewer, Outcomes.failed("Could not delete the downloaded build for "
                         + tracked.displayName() + ", see the console."));
                 return;
             }
 
-            redraw.screen(sender, Press.screenOf(data));
-            send(sender, Outcomes.cancelled(tracked.displayName()));
+            redraw.screen(viewer, Press.screenOf(data));
+            send(viewer, Outcomes.cancelled(tracked.displayName()));
         });
     }
 

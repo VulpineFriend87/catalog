@@ -2,7 +2,7 @@ package top.vulpine.catalog.paper.command;
 
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Named;
-import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.command.CommandActor;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 
 /**
@@ -21,7 +21,7 @@ public final class ClickCommand {
 
     @Command("catalog-do")
     @RequiresPermission(CommandPermissions.ANY)
-    public void press(BukkitCommandActor actor, @Named("press") String press) {
+    public void press(CommandActor actor, @Named("press") String press) {
         context.press(actor, press);
     }
 

@@ -1,14 +1,12 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import revxrsal.commands.autocomplete.SuggestionProvider;
-import revxrsal.commands.bukkit.actor.BukkitCommandActor;
+import revxrsal.commands.command.CommandActor;
 import revxrsal.commands.node.ExecutionContext;
 import revxrsal.commands.stream.StringStream;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.jar.model.InstalledJar;
-import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.command.screen.widget.Format;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.model.TrashEntry;
@@ -26,21 +24,21 @@ import java.util.function.Predicate;
  * <p>Each one offers only the plugins the command could actually act on, so completing an argument
  * can never produce a command that is refused.</p>
  *
- * <p>Lamp builds these itself, so they take no constructor and reach the plugin through Bukkit.</p>
+ * <p>Lamp builds these itself, so they take no constructor and reach Catalog as a Lamp dependency.</p>
  */
 public final class Suggestions {
 
     private Suggestions() {}
 
     /** Every jar Catalog could manage but is not. */
-    public static final class Untracked implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Untracked implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
 
             List<String> names = new ArrayList<>();
 
-            for (InstalledJar jar : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().untracked()) {
+            for (InstalledJar jar : context.lamp().dependency(Catalog.class).untracked()) {
                 names.add(Format.shownName(jar));
             }
 
@@ -50,20 +48,20 @@ public final class Suggestions {
     }
 
     /** Every plugin the history mentions, installed or not. */
-    public static final class Logged implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Logged implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
-            return matching(context, JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().loggedPlugins());
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
+            return matching(context, context.lamp().dependency(Catalog.class).loggedPlugins());
         }
 
     }
 
     /** The kinds of event the history can be narrowed to. */
-    public static final class Kinds implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Kinds implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
 
             List<String> kinds = new ArrayList<>();
 
@@ -77,23 +75,23 @@ public final class Suggestions {
     }
 
     /** Every managed plugin. */
-    public static final class Tracked implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Tracked implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
-            return matching(context, names(plugin -> true));
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
+            return matching(context, names(context, plugin -> true));
         }
 
     }
 
     /** Only the plugins with an update waiting, plus the word that means all of them. */
-    public static final class Updatable implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Updatable implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
 
-            Set<String> waiting = JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().updatesByProject().keySet();
-            List<String> names = names(plugin -> waiting.contains(plugin.projectId()));
+            Set<String> waiting = context.lamp().dependency(Catalog.class).updatesByProject().keySet();
+            List<String> names = names(context, plugin -> waiting.contains(plugin.projectId()));
 
             if (!names.isEmpty()) {
                 names.add(0, "all");
@@ -105,34 +103,34 @@ public final class Suggestions {
     }
 
     /** Only the plugins that are not held yet. */
-    public static final class Holdable implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Holdable implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
-            return matching(context, names(plugin -> !plugin.isPinned()));
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
+            return matching(context, names(context, plugin -> !plugin.isPinned()));
         }
 
     }
 
     /** Only the plugins that are held. */
-    public static final class Held implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Held implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
-            return matching(context, names(TrackedPlugin::isPinned));
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
+            return matching(context, names(context, TrackedPlugin::isPinned));
         }
 
     }
 
     /** Only what is in the trash, by the name it was removed under. */
-    public static final class Trashed implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Trashed implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
 
             List<String> names = new ArrayList<>();
 
-            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().trashed()) {
+            for (TrashEntry entry : context.lamp().dependency(Catalog.class).trashed()) {
                 names.add(quoted(entry.displayName()));
             }
 
@@ -142,14 +140,14 @@ public final class Suggestions {
     }
 
     /** What is in the trash, plus the word that means every one of them. */
-    public static final class Discardable implements SuggestionProvider<BukkitCommandActor> {
+    public static final class Discardable implements SuggestionProvider<CommandActor> {
 
         @Override
-        public Collection<String> getSuggestions(@NotNull ExecutionContext<BukkitCommandActor> context) {
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
 
             List<String> names = new ArrayList<>();
 
-            for (TrashEntry entry : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().trashed()) {
+            for (TrashEntry entry : context.lamp().dependency(Catalog.class).trashed()) {
                 names.add(quoted(entry.displayName()));
             }
 
@@ -169,7 +167,7 @@ public final class Suggestions {
      * is: Lamp hands every value straight to the builder without looking at the partial input, so
      * without this the list never shrinks as you type.</p>
      */
-    private static Collection<String> matching(ExecutionContext<BukkitCommandActor> context,
+    private static Collection<String> matching(ExecutionContext<CommandActor> context,
                                                List<String> names) {
 
         StringStream input = context.input();
@@ -209,9 +207,9 @@ public final class Suggestions {
         return trimmed.startsWith("\"") ? trimmed.substring(1) : trimmed;
     }
 
-    private static List<String> names(Predicate<TrackedPlugin> filter) {
+    private static List<String> names(ExecutionContext<CommandActor> context, Predicate<TrackedPlugin> filter) {
 
-        Catalog catalog = JavaPlugin.getPlugin(CatalogPaper.class).getCatalog();
+        Catalog catalog = context.lamp().dependency(Catalog.class);
         List<String> names = new ArrayList<>();
 
         for (TrackedPlugin tracked : catalog.getTracking().all()) {

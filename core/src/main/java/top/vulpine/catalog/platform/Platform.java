@@ -4,6 +4,7 @@ import top.vulpine.catalog.update.model.ServerTarget;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * What Catalog needs from the server it runs on.
@@ -61,6 +62,24 @@ public interface Platform {
      * @return true if a plugin loaded from it is enabled right now
      */
     boolean isEnabled(Path jar);
+
+    /**
+     * @param name the name a plugin declares
+     * @return why that plugin is not enabled, or null when it is
+     */
+    String notEnabled(String name);
+
+    /**
+     * Reads the configuration again.
+     *
+     * @return false when it could not be read
+     */
+    boolean reload();
+
+    /**
+     * @return who made Catalog
+     */
+    List<String> authors();
 
     /**
      * @return the folder Catalog keeps its own files in

@@ -56,7 +56,7 @@ class ClickContextRuleTest {
                     async = true;
                 }
 
-                if (line.contains("context.take(sender)") && async) {
+                if (line.contains("context.take(viewer)") && async) {
                     offenders.add(type.getSimpleName() + "." + method + " at line " + (i + 1));
                 }
             }

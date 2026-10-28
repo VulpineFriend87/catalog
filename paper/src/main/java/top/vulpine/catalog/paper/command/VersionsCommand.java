@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Flag;
@@ -20,6 +19,7 @@ import top.vulpine.catalog.paper.command.flow.Confirmations;
 import top.vulpine.catalog.paper.command.flow.Lookup;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
 import top.vulpine.catalog.paper.command.screen.VersionsPage;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.EnumMap;
@@ -54,17 +54,17 @@ public final class VersionsCommand implements OrphanCommand {
     @Subcommand("versions")
     @Description("The newest release, beta and alpha for this server")
     @RequiresPermission("command.info")
-    public void versions(CommandSender sender,
+    public void versions(Viewer viewer,
                          @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
                          @Switch("all") boolean all,
                          @Switch("incompatible") boolean incompatible,
                          @Flag("page") @Default("1") int page) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
-        confirmations.abandon(sender);
+        confirmations.abandon(viewer);
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
@@ -73,7 +73,7 @@ public final class VersionsCommand implements OrphanCommand {
                         ? tracked.projectId() : query);
 
                 if (project == null) {
-                    send(sender, Outcomes.unknownPlugin(query));
+                    send(viewer, Outcomes.unknownPlugin(query));
                     return;
                 }
 
@@ -84,18 +84,18 @@ public final class VersionsCommand implements OrphanCommand {
                         : catalog.compatibleVersions(project.id());
 
                 if (all) {
-                    send(sender, VersionsPage.allVersions(project, builds, installed, untracked,
+                    send(viewer, VersionsPage.allVersions(project, builds, installed, untracked,
                             catalog.gameVersion(), catalog.gameVersions(), incompatible, page,
                             Press.screenOf(data)));
                     return;
                 }
 
-                send(sender, VersionsPage.versions(project, catalog.gameVersion(), catalog.gameVersions(),
+                send(viewer, VersionsPage.versions(project, catalog.gameVersion(), catalog.gameVersions(),
                         newestOfEachChannel(builds), installed, untracked, incompatible,
                         Press.screenOf(data)));
 
             } catch (Exception e) {
-                send(sender, Outcomes.unreachable(Chat.rootMessage(e)));
+                send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
             }
         });
     }

@@ -20,6 +20,7 @@ import top.vulpine.catalog.modrinth.model.SearchResults;
 import top.vulpine.catalog.platform.ExitTasks;
 import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.Dependents;
+import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.IgnoreList;
 import top.vulpine.catalog.tracking.Library;
 import top.vulpine.catalog.tracking.Settings;
@@ -68,6 +69,7 @@ public final class Catalog {
     private Updates updates;
     private Library library;
     private Dependents dependents;
+    private EnableCheck enableCheck;
 
     /** Every Minecraft version Modrinth knows, loaded the first time it is needed. */
     private volatile GameVersions gameVersions;
@@ -83,10 +85,9 @@ public final class Catalog {
     /**
      * Loads the state, wires the services and starts the first scan.
      *
-     * @param scanned run once the first scan has finished
      * @return false when the state files could not be read
      */
-    public boolean start(Runnable scanned) {
+    public boolean start() {
 
         Path data = platform.dataFolder();
 
@@ -119,10 +120,11 @@ public final class Catalog {
         this.library = new Library(platform, modrinth, tracking, ignored, this::defaults,
                 () -> configuration.get().autoTrack(), history);
         this.dependents = new Dependents(tracking, hashes -> modrinth.identify(hashes).join());
+        this.enableCheck = new EnableCheck(platform, library, history, modrinth);
 
         Runtime.getRuntime().addShutdownHook(new Thread(exitTasks::run, "Catalog exit tasks"));
 
-        platform.async(() -> index(scanned));
+        platform.async(this::index);
         platform.async(this::pruneTrash);
         scheduleUpdateChecks();
 
@@ -155,12 +157,12 @@ public final class Catalog {
         return true;
     }
 
-    private void index(Runnable scanned) {
+    private void index() {
 
         downloader.clean();
 
         boolean indexed = library.index();
-        scanned.run();
+        enableCheck.scanned();
 
         if (indexed) {
             updates.check();

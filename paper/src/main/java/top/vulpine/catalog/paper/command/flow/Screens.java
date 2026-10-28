@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command.flow;
 
-import org.bukkit.command.CommandSender;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.modrinth.Projects;
@@ -9,8 +8,6 @@ import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.modrinth.model.SearchResults;
-import top.vulpine.catalog.paper.CatalogPaper;
-import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.Change;
 import top.vulpine.catalog.paper.command.ListFilter;
 import top.vulpine.catalog.paper.command.Press;
@@ -24,6 +21,8 @@ import top.vulpine.catalog.paper.command.screen.Outcomes;
 import top.vulpine.catalog.paper.command.screen.SearchPage;
 import top.vulpine.catalog.paper.command.screen.SettingsPage;
 import top.vulpine.catalog.paper.command.screen.TrashPage;
+import top.vulpine.catalog.platform.Viewer;
+import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.ArrayList;
@@ -41,17 +40,14 @@ public final class Screens {
 
     private final Catalog catalog;
 
-    private final CatalogPaper paper;
-
     private final Chat chat;
 
     private final Confirmations confirmations;
 
     private final Lookup lookup;
 
-    public Screens(Catalog catalog, CatalogPaper paper, Chat chat, Confirmations confirmations, Lookup lookup) {
+    public Screens(Catalog catalog, Chat chat, Confirmations confirmations, Lookup lookup) {
         this.catalog = catalog;
-        this.paper = paper;
         this.chat = chat;
         this.confirmations = confirmations;
         this.lookup = lookup;
@@ -60,21 +56,21 @@ public final class Screens {
     /**
      * Draws what one build declares it needs.
      */
-    public void showDependencies(CommandSender sender, String query, String wanted, String from) {
+    public void showDependencies(Viewer viewer, String query, String wanted, String from) {
 
         try {
 
             ModrinthProject project = lookup.projectFor(query);
 
             if (project == null) {
-                send(sender, Outcomes.unknownPlugin(query));
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
             ModrinthVersion version = lookup.build(project, wanted, wanted != null);
 
             if (version == null) {
-                send(sender, wanted == null
+                send(viewer, wanted == null
                         ? Outcomes.noBuild(project.title())
                         : Outcomes.noVersion(project.title(), wanted));
                 return;
@@ -86,10 +82,10 @@ public final class Screens {
             declared.addAll(resolution.optional());
             declared.addAll(resolution.conflicts());
 
-            send(sender, DependenciesPage.dependencies(project, version, catalog.named(declared), from));
+            send(viewer, DependenciesPage.dependencies(project, version, catalog.named(declared), from));
 
         } catch (Exception e) {
-            send(sender, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
         }
     }
 
@@ -100,7 +96,7 @@ public final class Screens {
      * @param here      this screen, so a dependency installed from it comes back to it
      * @param command   what confirming runs
      */
-    public void showChange(CommandSender sender, Change change, ModrinthProject project,
+    public void showChange(Viewer viewer, Change change, ModrinthProject project,
                             TrackedPlugin installed, ModrinthVersion version, String notFor,
                             DependencyResolver.Resolution resolution, String data, String here,
                             String command) {
@@ -120,22 +116,22 @@ public final class Screens {
         String replaces = installed != null && installed.pendingRestart()
                 ? installed.stagedVersionNumber() : null;
 
-        send(sender, ChangePage.change(change, project.title(), project.slug(), from, replaces, version,
+        send(viewer, ChangePage.change(change, project.title(), project.slug(), from, replaces, version,
                 notFor, catalog.named(needs), asked, Trail.within(here, asked == null ? null : asked.screen()), command));
     }
 
-    public void showTrash(CommandSender sender, int page) {
-        confirmations.abandon(sender);
-        send(sender, TrashPage.trash(catalog.trashed(),
-                paper.getConfiguration().trash.retentionDays, page));
+    public void showTrash(Viewer viewer, int page) {
+        confirmations.abandon(viewer);
+        send(viewer, TrashPage.trash(catalog.trashed(),
+                catalog.getConfiguration().get().trashRetentionDays(), page));
     }
 
     /**
      * Renders one plugin's settings.
      */
-    public void showSettings(CommandSender sender, TrackedPlugin tracked, String from) {
-        confirmations.abandon(sender);
-        send(sender, SettingsPage.settings(tracked, catalog.defaultSoakMinutes(), from));
+    public void showSettings(Viewer viewer, TrackedPlugin tracked, String from) {
+        confirmations.abandon(viewer);
+        send(viewer, SettingsPage.settings(tracked, catalog.defaultSoakMinutes(), from));
     }
 
     /**
@@ -145,12 +141,12 @@ public final class Screens {
      *
      * @param refresh whether to ask Modrinth again first
      */
-    public void showList(CommandSender sender, boolean refresh, Set<ListFilter> filters) {
+    public void showList(Viewer viewer, boolean refresh, Set<ListFilter> filters) {
 
-        confirmations.abandon(sender);
+        confirmations.abandon(viewer);
 
         if (catalog.getTracking().size() == 0 && catalog.untracked().isEmpty()) {
-            send(sender, Outcomes.nothingTracked());
+            send(viewer, Outcomes.nothingTracked());
             return;
         }
 
@@ -167,11 +163,11 @@ public final class Screens {
 
         Map<String, EnableCheck.Failure> notEnabled = new HashMap<>();
 
-        for (EnableCheck.Failure failure : paper.getEnableCheck().failures()) {
+        for (EnableCheck.Failure failure : catalog.getEnableCheck().failures()) {
             notEnabled.put(failure.plugin().projectId(), failure);
         }
 
-        send(sender, ListPage.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
+        send(viewer, ListPage.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
                 catalog.ownFileName(), catalog.untracked(), filters,
                 catalog.getUpdates().checkedAt(), catalog.getUpdates().unreachable()));
     }
@@ -179,9 +175,9 @@ public final class Screens {
     /**
      * Builds and sends the project page.
      */
-    public void showProject(CommandSender sender, String query) {
+    public void showProject(Viewer viewer, String query) {
 
-        confirmations.abandon(sender);
+        confirmations.abandon(viewer);
         catalog.noticeLoaded();
 
         try {
@@ -189,7 +185,7 @@ public final class Screens {
             ModrinthProject project = lookup.projectFor(query);
 
             if (project == null) {
-                send(sender, Outcomes.unknownPlugin(query));
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -200,7 +196,7 @@ public final class Screens {
             List<ModrinthVersion> compatible = lookup.compatibleOrEmpty(project.id());
             ModrinthVersion latest = Lookup.newestOn(compatible, channel);
 
-            send(sender, InfoPage.project(project, lookup.author(project.id()), latest,
+            send(viewer, InfoPage.project(project, lookup.author(project.id()), latest,
                     Projects.installTarget(compatible), tracked,
                     tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null,
                     catalog.isSelf(tracked),
@@ -209,12 +205,12 @@ public final class Screens {
                     catalog.platformLoaders(), catalog.gameVersions()));
 
         } catch (Exception e) {
-            send(sender, Outcomes.unreachable(Chat.rootMessage(e)));
+            send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
         }
     }
 
-    public void runSearch(CommandSender sender, String query, int page) {
-        chat.runAsync(sender, () -> showSearch(sender, query, page));
+    public void runSearch(Viewer viewer, String query, int page) {
+        chat.runAsync(viewer, () -> showSearch(viewer, query, page));
     }
 
     /**
@@ -222,9 +218,9 @@ public final class Screens {
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      */
-    private void showSearch(CommandSender sender, String query, int page) {
+    private void showSearch(Viewer viewer, String query, int page) {
 
-        confirmations.abandon(sender);
+        confirmations.abandon(viewer);
 
         try {
 
@@ -234,14 +230,14 @@ public final class Screens {
             // Text search does not match project ids, so a query that found nothing and could
             // be one is worth one direct lookup before giving up.
             if (results.hits().isEmpty() && !query.contains(" ")) {
-                showProject(sender, query);
+                showProject(viewer, query);
                 return;
             }
 
-            send(sender, SearchPage.search(query, results, page, lookup.trackedProjectIds()));
+            send(viewer, SearchPage.search(query, results, page, lookup.trackedProjectIds()));
 
         } catch (Exception e) {
-            send(sender, Outcomes.unreachable(Chat.rootMessage(e)));
+            send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
         }
     }
 

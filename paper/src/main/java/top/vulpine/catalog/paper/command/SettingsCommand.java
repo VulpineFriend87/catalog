@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Single;
@@ -14,6 +13,7 @@ import top.vulpine.catalog.paper.command.flow.Lookup;
 import top.vulpine.catalog.paper.command.flow.Redraw;
 import top.vulpine.catalog.paper.command.flow.Screens;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.Locale;
@@ -46,60 +46,60 @@ public final class SettingsCommand implements OrphanCommand {
     @Subcommand("settings")
     @Description("View the settings menu for a plugin")
     @RequiresPermission("command.settings")
-    public void settings(CommandSender sender,
+    public void settings(Viewer viewer,
                          @Named("plugin") @SuggestWith(Suggestions.Tracked.class) String query) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
-        screens.showSettings(sender, tracked, Press.screenOf(context.take(sender)));
+        screens.showSettings(viewer, tracked, Press.screenOf(context.take(viewer)));
     }
 
     @Subcommand("auto")
     @Description("Whether a plugin updates itself automatically")
     @RequiresPermission("command.settings")
-    public void auto(CommandSender sender,
+    public void auto(Viewer viewer,
                      @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
                      @Named("state") Toggle state) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
-        catalog.setAutoUpdate(tracked, state.on(), sender.getName());
-        redraw.then(sender, context.take(sender), Outcomes.autoSet(tracked.displayName(), state.on()));
+        catalog.setAutoUpdate(tracked, state.on(), viewer.name());
+        redraw.then(viewer, context.take(viewer), Outcomes.autoSet(tracked.displayName(), state.on()));
     }
 
     @Subcommand("soak")
     @Description("How long a build must be public before this plugin automatically installs it")
     @RequiresPermission("command.settings")
-    public void soak(CommandSender sender,
+    public void soak(Viewer viewer,
                      @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
                      @Named("window") String window) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
         Integer minutes = parseSoak(window);
 
         if (minutes == null) {
-            send(sender, Outcomes.badSoak());
+            send(viewer, Outcomes.badSoak());
             return;
         }
 
-        catalog.setSoak(tracked, minutes, sender.getName());
-        redraw.then(sender, context.take(sender), Outcomes.soakSet(tracked.displayName(), minutes,
+        catalog.setSoak(tracked, minutes, viewer.name());
+        redraw.then(viewer, context.take(viewer), Outcomes.soakSet(tracked.displayName(), minutes,
                 catalog.defaultSoakMinutes()));
     }
 
@@ -134,48 +134,48 @@ public final class SettingsCommand implements OrphanCommand {
     @Subcommand("channel")
     @Description("Which builds a plugin should follow")
     @RequiresPermission("command.channel")
-    public void channel(CommandSender sender,
+    public void channel(Viewer viewer,
                         @Named("plugin") @Single @SuggestWith(Suggestions.Tracked.class) String query,
                         @Named("channel") ReleaseChannel channel) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
-        catalog.setChannel(tracked, channel, sender.getName());
-        redraw.then(sender, context.take(sender), Outcomes.channelSet(tracked.displayName(), channel));
+        catalog.setChannel(tracked, channel, viewer.name());
+        redraw.then(viewer, context.take(viewer), Outcomes.channelSet(tracked.displayName(), channel));
     }
 
     @Subcommand("hold")
     @Description("Freeze a plugin at its installed version")
     @RequiresPermission("command.hold")
-    public void hold(CommandSender sender,
+    public void hold(Viewer viewer,
                      @Named("plugin") @SuggestWith(Suggestions.Holdable.class) String query) {
-        setHeld(sender, query, true);
+        setHeld(viewer, query, true);
     }
 
     @Subcommand("unhold")
     @Description("Let a plugin be updated again")
     @RequiresPermission("command.hold")
-    public void unhold(CommandSender sender,
+    public void unhold(Viewer viewer,
                        @Named("plugin") @SuggestWith(Suggestions.Held.class) String query) {
-        setHeld(sender, query, false);
+        setHeld(viewer, query, false);
     }
 
-    private void setHeld(CommandSender sender, String query, boolean held) {
+    private void setHeld(Viewer viewer, String query, boolean held) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
-        catalog.setHeld(tracked, held, sender.getName());
-        redraw.then(sender, context.take(sender), Outcomes.held(tracked.displayName(), held));
+        catalog.setHeld(tracked, held, viewer.name());
+        redraw.then(viewer, context.take(viewer), Outcomes.held(tracked.displayName(), held));
     }
 
 }

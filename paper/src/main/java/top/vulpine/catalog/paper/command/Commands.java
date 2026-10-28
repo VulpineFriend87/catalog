@@ -4,7 +4,6 @@ import revxrsal.commands.orphan.OrphanCommand;
 import revxrsal.commands.orphan.OrphanRegistry;
 import revxrsal.commands.orphan.Orphans;
 import top.vulpine.catalog.Catalog;
-import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.command.flow.ChangeFlow;
 import top.vulpine.catalog.paper.command.flow.Chat;
 import top.vulpine.catalog.paper.command.flow.Confirmations;
@@ -45,18 +44,18 @@ public final class Commands {
 
     private final List<OrphanCommand> commands;
 
-    public Commands(CatalogPaper paper, Catalog catalog, ClickContext context) {
+    public Commands(Catalog catalog, ClickContext context) {
 
-        Chat chat = new Chat(paper);
+        Chat chat = new Chat(catalog);
         Confirmations confirmations = new Confirmations();
-        Lookup lookup = new Lookup(catalog, paper);
-        Screens screens = new Screens(catalog, paper, chat, confirmations, lookup);
+        Lookup lookup = new Lookup(catalog);
+        Screens screens = new Screens(catalog, chat, confirmations, lookup);
         Redraw redraw = new Redraw(chat, lookup, screens, this::changes);
 
         this.changes = new ChangeFlow(catalog, chat, confirmations, lookup, screens, redraw);
 
         this.commands = List.of(
-                new CatalogCommand(paper),
+                new CatalogCommand(catalog),
                 new ListCommand(context, chat, screens),
                 new InfoCommand(context, chat, screens),
                 new VersionsCommand(catalog, context, chat, confirmations, lookup),

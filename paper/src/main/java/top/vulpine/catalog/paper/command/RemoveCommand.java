@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Subcommand;
@@ -16,6 +15,7 @@ import top.vulpine.catalog.paper.command.flow.Redraw;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
 import top.vulpine.catalog.paper.command.screen.RemovePage;
 import top.vulpine.catalog.paper.command.screen.widget.Format;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.TrashBin;
 
@@ -52,37 +52,37 @@ public final class RemoveCommand implements OrphanCommand {
     @Subcommand("uninstall")
     @Description("Moves a plugin to the trash")
     @RequiresPermission("command.uninstall")
-    public void uninstall(CommandSender sender,
+    public void uninstall(Viewer viewer,
                           @Named("plugin") @SuggestWith(Suggestions.Tracked.class) String query) {
 
         TrackedPlugin tracked = lookup.resolve(query);
 
         if (tracked == null) {
-            send(sender, Outcomes.unknownPlugin(query));
+            send(viewer, Outcomes.unknownPlugin(query));
             return;
         }
 
         if (catalog.isSelf(tracked)) {
-            send(sender, Outcomes.cannotRemoveSelf(tracked.displayName()));
+            send(viewer, Outcomes.cannotRemoveSelf(tracked.displayName()));
             return;
         }
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
         String name = tracked.displayName();
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
                 // Removing is normally offered with an undo rather than a confirmation. That stops
                 // being enough when something else needs it: an undo cannot help a server that
                 // already failed to start.
-                if (!confirmations.confirmed(sender, "remove:" + tracked.projectId(), data)) {
+                if (!confirmations.confirmed(viewer, "remove:" + tracked.projectId(), data)) {
 
                     List<TrackedPlugin> dependents = catalog.dependentsOf(tracked);
 
                     if (!dependents.isEmpty()) {
-                        send(sender, RemovePage.confirmRemove(tracked, dependents, Press.of(data)));
+                        send(viewer, RemovePage.confirmRemove(tracked, dependents, Press.of(data)));
                         return;
                     }
                 }
@@ -90,14 +90,14 @@ public final class RemoveCommand implements OrphanCommand {
                 catalog.noticeLoaded();
                 boolean loaded = !tracked.pendingLoad();
 
-                TrashBin.Result result = catalog.uninstall(tracked, sender.getName());
+                TrashBin.Result result = catalog.uninstall(tracked, viewer.name());
 
-                redraw.screen(sender, Press.screenOf(data));
-                send(sender, Outcomes.removed(name, loaded, result == null ? null : result.entry(),
+                redraw.screen(viewer, Press.screenOf(data));
+                send(viewer, Outcomes.removed(name, loaded, result == null ? null : result.entry(),
                         Press.screenOf(data)));
 
             } catch (Exception e) {
-                send(sender, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
             }
         });
     }
@@ -105,17 +105,17 @@ public final class RemoveCommand implements OrphanCommand {
     @Subcommand("untrack")
     @Description("Stops managing a plugin, leaving the jar alone")
     @RequiresPermission("command.untrack")
-    public void untrack(CommandSender sender,
+    public void untrack(Viewer viewer,
                         @Named("plugin") @SuggestWith(Suggestions.Tracked.class) String query) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             TrackedPlugin tracked = lookup.resolve(query);
 
             if (tracked == null) {
-                send(sender, Outcomes.unknownPlugin(query));
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -124,37 +124,37 @@ public final class RemoveCommand implements OrphanCommand {
             // A staged build is already in the update folder, so leaving it there would update a
             // plugin Catalog has just been told to stop following.
             if (tracked.pendingRestart()) {
-                catalog.cancelUpdate(tracked, sender.getName());
+                catalog.cancelUpdate(tracked, viewer.name());
             }
 
-            catalog.untrack(tracked, sender.getName());
-            redraw.then(sender, data, Outcomes.untracked(name));
+            catalog.untrack(tracked, viewer.name());
+            redraw.then(viewer, data, Outcomes.untracked(name));
         });
     }
 
     @Subcommand("track")
     @Description("Manages a plugin Catalog was told to leave alone")
     @RequiresPermission("command.untrack")
-    public void track(CommandSender sender,
+    public void track(Viewer viewer,
                       @Named("jar") @SuggestWith(Suggestions.Untracked.class) String query) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             InstalledJar jar = lookup.resolveUntracked(query);
 
             if (jar == null) {
-                send(sender, Outcomes.unknownPlugin(query));
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
-            if (!catalog.track(jar, sender.getName())) {
-                send(sender, Outcomes.unknownPlugin(query));
+            if (!catalog.track(jar, viewer.name())) {
+                send(viewer, Outcomes.unknownPlugin(query));
                 return;
             }
 
-            redraw.then(sender, data, Outcomes.tracked(Format.shownName(jar)));
+            redraw.then(viewer, data, Outcomes.tracked(Format.shownName(jar)));
         });
     }
 

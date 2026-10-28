@@ -1,10 +1,10 @@
 package top.vulpine.catalog.paper.command.flow;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.command.CommandSender;
 import top.vulpine.catalog.paper.command.Press;
 import top.vulpine.catalog.paper.command.Screen;
 import top.vulpine.catalog.paper.command.Trail;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.function.Supplier;
@@ -39,12 +39,12 @@ public final class Redraw {
      *
      * @param data the trail of the screen the button was on, or null
      */
-    public void screen(CommandSender sender, String data) {
+    public void screen(Viewer viewer, String data) {
 
         Screen screen = Screen.parse(Trail.current(data));
 
         if (screen != null) {
-            screen.accept(new Drawing(sender, data));
+            screen.accept(new Drawing(viewer, data));
         }
     }
 
@@ -54,39 +54,39 @@ public final class Redraw {
      * @param data    what the button carried, or null when the command was typed
      * @param outcome the one line saying what happened
      */
-    public void then(CommandSender sender, String data, Component outcome) {
+    public void then(Viewer viewer, String data, Component outcome) {
 
-        chat.runAsync(sender, () -> {
-            screen(sender, Press.screenOf(data));
-            send(sender, outcome);
+        chat.runAsync(viewer, () -> {
+            screen(viewer, Press.screenOf(data));
+            send(viewer, outcome);
         });
     }
 
     private final class Drawing implements Screen.Visitor {
 
-        private final CommandSender sender;
+        private final Viewer viewer;
 
         /** The trail of the screen. */
         private final String data;
 
-        private Drawing(CommandSender sender, String data) {
-            this.sender = sender;
+        private Drawing(Viewer viewer, String data) {
+            this.viewer = viewer;
             this.data = data;
         }
 
         @Override
         public void list(Screen.ListScreen screen) {
-            screens.showList(sender, true, screen.filters());
+            screens.showList(viewer, true, screen.filters());
         }
 
         @Override
         public void trash(Screen.TrashScreen screen) {
-            screens.showTrash(sender, 1);
+            screens.showTrash(viewer, 1);
         }
 
         @Override
         public void info(Screen.InfoScreen screen) {
-            screens.showProject(sender, screen.slug());
+            screens.showProject(viewer, screen.slug());
         }
 
         @Override
@@ -95,27 +95,27 @@ public final class Redraw {
             TrackedPlugin tracked = lookup.resolve(screen.slug());
 
             if (tracked != null) {
-                screens.showSettings(sender, tracked, Trail.parent(data));
+                screens.showSettings(viewer, tracked, Trail.parent(data));
             }
         }
 
         @Override
         public void dependencies(Screen.DependenciesScreen screen) {
-            screens.showDependencies(sender, screen.slug(), screen.versionId(), Trail.parent(data));
+            screens.showDependencies(viewer, screen.slug(), screen.versionId(), Trail.parent(data));
         }
 
         @Override
         public void change(Screen.ChangeScreen screen) {
 
             if (!screen.verb().equals("update")) {
-                changes.get().runInstall(sender, screen.slug(), screen.versionId(), true, data);
+                changes.get().runInstall(viewer, screen.slug(), screen.versionId(), true, data);
                 return;
             }
 
             TrackedPlugin tracked = lookup.resolve(screen.slug());
 
             if (tracked != null) {
-                changes.get().runUpdate(sender, tracked, data);
+                changes.get().runUpdate(viewer, tracked, data);
             }
         }
 

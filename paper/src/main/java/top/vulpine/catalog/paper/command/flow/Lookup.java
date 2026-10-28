@@ -9,7 +9,6 @@ import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.modrinth.model.SearchHit;
 import top.vulpine.catalog.modrinth.model.SearchResults;
 import top.vulpine.catalog.modrinth.model.TeamMember;
-import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.command.ClickContext;
 import top.vulpine.catalog.paper.command.screen.widget.Format;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
@@ -27,11 +26,8 @@ public final class Lookup {
 
     private final Catalog catalog;
 
-    private final CatalogPaper paper;
-
-    public Lookup(Catalog catalog, CatalogPaper paper) {
+    public Lookup(Catalog catalog) {
         this.catalog = catalog;
-        this.paper = paper;
     }
 
     /**
@@ -175,7 +171,7 @@ public final class Lookup {
     }
 
     public ReleaseChannel defaultChannel() {
-        return paper.getConfiguration().tracking.defaults.channel;
+        return catalog.getConfiguration().get().defaults().channel();
     }
 
     /**

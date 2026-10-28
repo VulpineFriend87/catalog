@@ -1,11 +1,11 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.command.CommandActor;
 import revxrsal.commands.process.SenderResolver;
+import top.vulpine.catalog.platform.Viewer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
@@ -30,7 +30,7 @@ class CommandsTest {
 
             @Override
             public boolean isSenderType(revxrsal.commands.command.CommandParameter parameter) {
-                return CommandSender.class.isAssignableFrom(parameter.type());
+                return Viewer.class.isAssignableFrom(parameter.type());
             }
 
             @Override
@@ -47,7 +47,7 @@ class CommandsTest {
 
         // Never dereferenced: registration reflects over the class, it does not call anything.
         assertDoesNotThrow(() -> {
-            lamp.register(new Commands(null, null, null).registries().toArray());
+            lamp.register(new Commands(null, null).registries().toArray());
             lamp.register(new ClickCommand(null));
         });
     }

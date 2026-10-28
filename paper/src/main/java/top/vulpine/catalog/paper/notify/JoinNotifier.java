@@ -1,36 +1,18 @@
 package top.vulpine.catalog.paper.notify;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.paper.CatalogPaper;
-import top.vulpine.catalog.paper.EnableCheck;
-import top.vulpine.catalog.paper.command.Commands;
-import top.vulpine.catalog.paper.command.Notice;
-import top.vulpine.catalog.paper.command.screen.JoinNotice;
-import top.vulpine.catalog.paper.util.PermissionChecker;
-import top.vulpine.catalog.tracking.model.TrackedPlugin;
-import top.vulpine.catalog.update.model.UpdateCandidate;
+import top.vulpine.catalog.paper.PaperViewer;
+import top.vulpine.catalog.paper.command.flow.JoinNews;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Tells staff about updates when they join.
- *
- * <p>Open updates are repeated on every join. What the last start did is told once per player.</p>
  */
 public final class JoinNotifier implements Listener {
 
@@ -41,16 +23,11 @@ public final class JoinNotifier implements Listener {
 
     private final CatalogPaper paper;
 
-    private final Catalog catalog;
+    private final JoinNews news;
 
-    /**
-     * The news each player has already heard this session, by plugin and build.
-     */
-    private final Map<UUID, Set<String>> heard = new ConcurrentHashMap<>();
-
-    public JoinNotifier(CatalogPaper paper) {
+    public JoinNotifier(CatalogPaper paper, JoinNews news) {
         this.paper = paper;
-        this.catalog = paper.getCatalog();
+        this.news = news;
     }
 
     @EventHandler
@@ -58,8 +35,7 @@ public final class JoinNotifier implements Listener {
 
         Player player = event.getPlayer();
 
-        if (!paper.getConfiguration().updates.notifyOnJoin
-                || !PermissionChecker.hasPermission(player, "notify")) {
+        if (!paper.getConfiguration().updates.notifyOnJoin || !new PaperViewer(player).has("notify")) {
             return;
         }
 
@@ -78,7 +54,7 @@ public final class JoinNotifier implements Listener {
         }
 
         // No answer before the first check.
-        if (catalog.getUpdates().checkedAt() == null) {
+        if (!news.ready()) {
 
             if (attempts > 1) {
                 later(player, attempts - 1);
@@ -87,164 +63,7 @@ public final class JoinNotifier implements Listener {
             return;
         }
 
-        Set<String> heardBefore = heard.computeIfAbsent(player.getUniqueId(),
-                uuid -> ConcurrentHashMap.newKeySet());
-        Set<String> news = new HashSet<>();
-
-        List<Notice> notices = notices(heardBefore, news);
-
-        if (notices.isEmpty()) {
-            return;
-        }
-
-        player.sendMessage(Component.empty());
-
-        for (Component line : JoinNotice.notice(notices, hasAvailable(notices))) {
-
-            Component shown = Commands.PERMISSIONS.shown(player, line);
-
-            if (shown != null) {
-                player.sendMessage(shown);
-            }
-        }
-
-        heardBefore.addAll(news);
-    }
-
-    /**
-     * @param heardBefore the news this player has already been told
-     * @param news        filled with the news this call reports
-     */
-    private List<Notice> notices(Set<String> heardBefore, Set<String> news) {
-
-        catalog.noticeLoaded();
-
-        List<Notice> out = new ArrayList<>();
-
-        List<Notice.Item> notEnabled = new ArrayList<>();
-        Set<String> failed = new HashSet<>();
-
-        for (EnableCheck.Failure failure : paper.getEnableCheck().failures()) {
-
-            TrackedPlugin tracked = failure.plugin();
-            failed.add(tracked.projectId());
-            String key = "not-enabled:" + tracked.projectId() + ":" + tracked.versionId();
-
-            if (heardBefore.contains(key)) {
-                continue;
-            }
-
-            news.add(key);
-
-            boolean back = failure.canRollBack();
-
-            notEnabled.add(new Notice.Item(tracked.displayName(),
-                    back ? tracked.previousVersionNumber() + " → " + tracked.versionNumber()
-                            : tracked.versionNumber(),
-                    failure.reason(),
-                    back ? JoinNotice.rollbackCommand(tracked) : null,
-                    tracked.previousVersionNumber(),
-                    failure.previousRemoved()));
-        }
-
-        add(out, Notice.Kind.DID_NOT_ENABLE, notEnabled);
-
-        Set<TrackedPlugin> missed = new HashSet<>();
-        List<Notice.Item> missedNews = new ArrayList<>();
-
-        for (TrackedPlugin tracked : catalog.getLibrary().notApplied()) {
-
-            if (!tracked.pendingRestart()) {
-                continue;
-            }
-
-            missed.add(tracked);
-
-            String key = "missed:" + tracked.projectId() + ":" + tracked.stagedVersionId();
-
-            if (!heardBefore.contains(key)) {
-                news.add(key);
-                missedNews.add(new Notice.Item(tracked.displayName(),
-                        tracked.versionNumber() + " is still installed"));
-            }
-        }
-
-        add(out, Notice.Kind.DID_NOT_APPLY, missedNews);
-
-        Map<String, String> failures = catalog.getUpdates().failures();
-        List<Notice.Item> autoFailed = new ArrayList<>();
-        List<Notice.Item> available = new ArrayList<>();
-
-        for (UpdateCandidate candidate : catalog.openUpdates()) {
-
-            String builds = candidate.from() + " → " + candidate.to();
-            String reason = failures.get(candidate.plugin().projectId());
-
-            (reason == null ? available : autoFailed).add(
-                    new Notice.Item(candidate.plugin().displayName(), builds, reason));
-        }
-
-        add(out, Notice.Kind.AUTO_UPDATE_FAILED, autoFailed);
-
-        List<Notice.Item> applied = new ArrayList<>();
-
-        for (TrackedPlugin tracked : catalog.getLibrary().applied()) {
-
-            String key = "applied:" + tracked.projectId() + ":" + tracked.versionId();
-
-            if (!heardBefore.contains(key) && !failed.contains(tracked.projectId())) {
-                news.add(key);
-                applied.add(new Notice.Item(tracked.displayName(), tracked.versionNumber()));
-            }
-        }
-
-        add(out, Notice.Kind.APPLIED, applied);
-
-        List<TrackedPlugin> waiting = new ArrayList<>();
-
-        for (TrackedPlugin tracked : catalog.getTracking().all()) {
-            if (tracked.awaitingRestart() && !missed.contains(tracked)) {
-                waiting.add(tracked);
-            }
-        }
-
-        add(out, Notice.Kind.WAITING, names(waiting));
-        add(out, Notice.Kind.AVAILABLE, available);
-
-        return out;
-    }
-
-    private static void add(List<Notice> out, Notice.Kind kind, List<Notice.Item> plugins) {
-
-        if (plugins.isEmpty()) {
-            return;
-        }
-
-        List<Notice.Item> sorted = new ArrayList<>(plugins);
-        sorted.sort(Comparator.comparing(item -> item.name().toLowerCase(Locale.ROOT)));
-        out.add(new Notice(kind, sorted));
-    }
-
-    private static List<Notice.Item> names(Iterable<TrackedPlugin> plugins) {
-
-        List<Notice.Item> names = new ArrayList<>();
-
-        for (TrackedPlugin tracked : plugins) {
-            names.add(new Notice.Item(tracked.displayName(), null));
-        }
-
-        return names;
-    }
-
-    private static boolean hasAvailable(List<Notice> notices) {
-
-        for (Notice notice : notices) {
-            if (notice.kind() == Notice.Kind.AVAILABLE) {
-                return true;
-            }
-        }
-
-        return false;
+        news.tell(new PaperViewer(player));
     }
 
 }

@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Optional;
@@ -11,6 +10,7 @@ import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.flow.ChangeFlow;
 import top.vulpine.catalog.paper.command.flow.Chat;
+import top.vulpine.catalog.platform.Viewer;
 
 /**
  * {@code /catalog install}.
@@ -32,16 +32,16 @@ public final class InstallCommand implements OrphanCommand {
     @Subcommand("install")
     @Description("Install a plugin from Modrinth")
     @RequiresPermission("command.install")
-    public void install(CommandSender sender, @Named("plugin") @Single String query,
+    public void install(Viewer viewer, @Named("plugin") @Single String query,
                         @Optional @Named("version") String wanted,
                         @Switch("incompatible") boolean incompatible) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
         String named = wanted == null || ClickContext.strip(wanted).isEmpty()
                 ? null : ClickContext.strip(wanted);
 
-        chat.runAsync(sender, () -> changes.runInstall(sender, query, named, incompatible, data));
+        chat.runAsync(viewer, () -> changes.runInstall(viewer, query, named, incompatible, data));
     }
 
 }

@@ -1,13 +1,11 @@
-package top.vulpine.catalog.paper;
+package top.vulpine.catalog.tracking;
 
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.server.ServerLoadEvent;
-import org.bukkit.plugin.Plugin;
-import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.CatalogAction;
+import top.vulpine.catalog.history.History;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.modrinth.ModrinthClient;
 import top.vulpine.catalog.modrinth.ModrinthException;
+import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.commons.log.Logger;
 
@@ -20,11 +18,15 @@ import java.util.List;
  * <p>Runs when both the server has finished starting and Catalog's first scan has finished, in
  * whichever order they arrive.</p>
  */
-public final class EnableCheck implements Listener {
+public final class EnableCheck {
 
-    private final CatalogPaper paper;
+    private final Platform platform;
 
-    private final Catalog catalog;
+    private final Library library;
+
+    private final History history;
+
+    private final ModrinthClient modrinth;
 
     private boolean started;
     private boolean scanned;
@@ -32,9 +34,11 @@ public final class EnableCheck implements Listener {
 
     private volatile List<Failure> failures = List.of();
 
-    public EnableCheck(CatalogPaper paper, Catalog catalog) {
-        this.paper = paper;
-        this.catalog = catalog;
+    public EnableCheck(Platform platform, Library library, History history, ModrinthClient modrinth) {
+        this.platform = platform;
+        this.library = library;
+        this.history = history;
+        this.modrinth = modrinth;
     }
 
     /**
@@ -62,7 +66,7 @@ public final class EnableCheck implements Listener {
         List<Failure> still = new ArrayList<>();
 
         for (Failure failure : failures) {
-            if (!catalog.getPlatform().isEnabled(catalog.getPlatform().pluginsFolder().resolve(failure.plugin().fileName()))) {
+            if (!platform.isEnabled(platform.pluginsFolder().resolve(failure.plugin().fileName()))) {
                 still.add(failure);
             }
         }
@@ -74,12 +78,10 @@ public final class EnableCheck implements Listener {
         return failures;
     }
 
-    @EventHandler
-    public void onServerLoad(ServerLoadEvent event) {
-
-        if (event.getType() != ServerLoadEvent.LoadType.STARTUP) {
-            return;
-        }
+    /**
+     * Called once the server has finished starting.
+     */
+    public void started() {
 
         synchronized (this) {
             started = true;
@@ -109,18 +111,18 @@ public final class EnableCheck implements Listener {
             done = true;
         }
 
-        catalog.getPlatform().async(this::check);
+        platform.async(this::check);
     }
 
     private void check() {
 
         List<Failure> found = new ArrayList<>();
 
-        for (TrackedPlugin tracked : catalog.getLibrary().applied()) {
+        for (TrackedPlugin tracked : library.applied()) {
             check(tracked, true, found);
         }
 
-        for (TrackedPlugin tracked : catalog.getLibrary().loaded()) {
+        for (TrackedPlugin tracked : library.loaded()) {
             check(tracked, false, found);
         }
 
@@ -129,15 +131,13 @@ public final class EnableCheck implements Listener {
 
     private void check(TrackedPlugin tracked, boolean updated, List<Failure> found) {
 
-        String name = catalog.getLibrary().declaredName(tracked);
+        String name = library.declaredName(tracked);
 
         if (name == null) {
             return;
         }
 
-        Plugin running = paper.getServer().getPluginManager().getPlugin(name);
-        String reason = running == null ? "not loaded"
-                : !running.isEnabled() ? "disabled during startup" : null;
+        String reason = platform.notEnabled(name);
 
         if (reason == null) {
             return;
@@ -147,7 +147,7 @@ public final class EnableCheck implements Listener {
                 updated && tracked.canRollBack() && removed(tracked.previousVersionId()));
 
         found.add(failure);
-        catalog.getHistory().add(HistoryEntry.notEnabled(tracked, updated, reason));
+        history.add(HistoryEntry.notEnabled(tracked, updated, reason));
 
         Logger.warn(CatalogAction.UPDATE, tracked.displayName() + " " + tracked.versionNumber()
                 + " did not enable after the " + (updated ? "update" : "install") + "."
@@ -161,7 +161,7 @@ public final class EnableCheck implements Listener {
     private boolean removed(String versionId) {
 
         try {
-            catalog.getModrinth().version(versionId).join();
+            modrinth.version(versionId).join();
             return false;
         } catch (Exception e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;

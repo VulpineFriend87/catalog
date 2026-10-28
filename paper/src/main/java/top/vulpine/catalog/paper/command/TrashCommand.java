@@ -1,6 +1,5 @@
 package top.vulpine.catalog.paper.command;
 
-import org.bukkit.command.CommandSender;
 import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Flag;
@@ -17,6 +16,7 @@ import top.vulpine.catalog.paper.command.flow.Redraw;
 import top.vulpine.catalog.paper.command.flow.Screens;
 import top.vulpine.catalog.paper.command.screen.Outcomes;
 import top.vulpine.catalog.paper.command.screen.TrashPage;
+import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.model.TrashEntry;
 
@@ -54,8 +54,8 @@ public final class TrashCommand implements OrphanCommand {
     @Subcommand("trash")
     @Description("Show plugins you have removed")
     @RequiresPermission("command.trash")
-    public void trash(CommandSender sender, @Flag("page") @Default("1") int page) {
-        chat.runAsync(sender, () -> screens.showTrash(sender, Math.max(page, 1)));
+    public void trash(Viewer viewer, @Flag("page") @Default("1") int page) {
+        chat.runAsync(viewer, () -> screens.showTrash(viewer, Math.max(page, 1)));
     }
 
     /**
@@ -64,29 +64,29 @@ public final class TrashCommand implements OrphanCommand {
     @Subcommand("trash restore")
     @Description("Put a removed plugin back")
     @RequiresPermission("command.trash")
-    public void restore(CommandSender sender,
+    public void restore(Viewer viewer,
                         @Named("removal") @SuggestWith(Suggestions.Trashed.class) String query) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
                 TrashEntry entry = lookup.resolveTrashed(query);
 
                 if (entry == null) {
-                    send(sender, Outcomes.nothingToRestore());
+                    send(viewer, Outcomes.nothingToRestore());
                     return;
                 }
 
-                TrackedPlugin tracked = catalog.restore(entry, sender.getName());
+                TrackedPlugin tracked = catalog.restore(entry, viewer.name());
 
-                redraw.screen(sender, Press.screenOf(data));
-                send(sender, Outcomes.restored(entry.displayName(), tracked != null));
+                redraw.screen(viewer, Press.screenOf(data));
+                send(viewer, Outcomes.restored(entry.displayName(), tracked != null));
 
             } catch (Exception e) {
-                send(sender, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
             }
         });
     }
@@ -97,63 +97,63 @@ public final class TrashCommand implements OrphanCommand {
     @Subcommand("trash delete")
     @Description("Delete a removal permanently")
     @RequiresPermission("command.trash")
-    public void delete(CommandSender sender,
+    public void delete(Viewer viewer,
                        @Named("removal") @SuggestWith(Suggestions.Discardable.class) String query) {
 
-        String data = context.take(sender);
+        String data = context.take(viewer);
 
         if ("all".equalsIgnoreCase(ClickContext.strip(query).trim())) {
-            emptyTrash(sender, data);
+            emptyTrash(viewer, data);
             return;
         }
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
                 TrashEntry entry = lookup.resolveTrashed(query);
 
                 if (entry == null) {
-                    send(sender, Outcomes.nothingToRestore());
+                    send(viewer, Outcomes.nothingToRestore());
                     return;
                 }
 
-                catalog.discardTrashed(entry, sender.getName());
+                catalog.discardTrashed(entry, viewer.name());
 
-                redraw.screen(sender, Press.screenOf(data));
-                send(sender, Outcomes.discarded(entry.displayName()));
+                redraw.screen(viewer, Press.screenOf(data));
+                send(viewer, Outcomes.discarded(entry.displayName()));
 
             } catch (Exception e) {
-                send(sender, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
             }
         });
     }
 
-    private void emptyTrash(CommandSender sender, String data) {
+    private void emptyTrash(Viewer viewer, String data) {
 
-        chat.runAsync(sender, () -> {
+        chat.runAsync(viewer, () -> {
 
             try {
 
                 int waiting = catalog.trashed().size();
 
                 if (waiting == 0) {
-                    send(sender, Outcomes.trashAlreadyEmpty());
+                    send(viewer, Outcomes.trashAlreadyEmpty());
                     return;
                 }
 
-                if (!confirmations.confirmed(sender, "empty", data)) {
-                    send(sender, TrashPage.confirmEmpty(waiting));
+                if (!confirmations.confirmed(viewer, "empty", data)) {
+                    send(viewer, TrashPage.confirmEmpty(waiting));
                     return;
                 }
 
-                int deleted = catalog.emptyTrash(sender.getName());
+                int deleted = catalog.emptyTrash(viewer.name());
 
-                redraw.screen(sender, Press.screenOf(data));
-                send(sender, Outcomes.emptied(deleted));
+                redraw.screen(viewer, Press.screenOf(data));
+                send(viewer, Outcomes.emptied(deleted));
 
             } catch (Exception e) {
-                send(sender, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
             }
         });
     }
