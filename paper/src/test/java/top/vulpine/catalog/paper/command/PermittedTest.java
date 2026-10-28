@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import top.vulpine.catalog.paper.command.screen.Outcomes;
 
 import java.util.function.Predicate;
 
@@ -47,7 +48,7 @@ class PermittedTest {
     @DisplayName("a row the viewer cannot act on keeps its text, loses its click and the action")
     void rowLosesClick() {
 
-        Component row = Messages.autoUpdateTurnedOff("5.5.72", "luckperms");
+        Component row = Outcomes.autoUpdateTurnedOff("5.5.72", "luckperms");
         Component permitted = Permitted.filter(row, command -> !command.contains("settings"));
 
         assertEquals("Auto-update was turned off",
@@ -61,7 +62,7 @@ class PermittedTest {
     @DisplayName("a row the viewer can act on is left alone")
     void rowKeepsClick() {
 
-        Component row = Messages.autoUpdateTurnedOff("5.5.72", "luckperms");
+        Component row = Outcomes.autoUpdateTurnedOff("5.5.72", "luckperms");
 
         assertEquals(row, Permitted.filter(row, command -> true));
     }

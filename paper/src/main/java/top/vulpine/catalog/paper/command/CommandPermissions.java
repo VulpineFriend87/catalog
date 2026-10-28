@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
+import top.vulpine.catalog.paper.command.screen.widget.Widgets;
 import top.vulpine.catalog.paper.util.PermissionChecker;
 
 import java.lang.reflect.Method;
@@ -119,7 +120,7 @@ public final class CommandPermissions {
             return null;
         }
 
-        return sender instanceof Player ? permitted : Messages.typed(permitted);
+        return sender instanceof Player ? permitted : Widgets.typed(permitted);
     }
 
 }

@@ -6,7 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import top.vulpine.catalog.paper.command.Messages;
+import top.vulpine.catalog.paper.command.screen.widget.Widgets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TypedScreenTest {
 
     private static String plain(Component component) {
-        return PlainTextComponentSerializer.plainText().serialize(Messages.typed(component));
+        return PlainTextComponentSerializer.plainText().serialize(Widgets.typed(component));
     }
 
     private static Component widget(String label, String command) {

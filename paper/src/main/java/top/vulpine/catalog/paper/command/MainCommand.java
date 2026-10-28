@@ -17,9 +17,9 @@ import revxrsal.commands.annotation.Switch;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.jar.model.InstalledJar;
-import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.modrinth.Projects;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
@@ -31,6 +31,19 @@ import top.vulpine.catalog.modrinth.model.TeamMember;
 import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
+import top.vulpine.catalog.paper.command.screen.ChangePage;
+import top.vulpine.catalog.paper.command.screen.DependenciesPage;
+import top.vulpine.catalog.paper.command.screen.HelpPage;
+import top.vulpine.catalog.paper.command.screen.HistoryPage;
+import top.vulpine.catalog.paper.command.screen.InfoPage;
+import top.vulpine.catalog.paper.command.screen.ListPage;
+import top.vulpine.catalog.paper.command.screen.Outcomes;
+import top.vulpine.catalog.paper.command.screen.RemovePage;
+import top.vulpine.catalog.paper.command.screen.SearchPage;
+import top.vulpine.catalog.paper.command.screen.SettingsPage;
+import top.vulpine.catalog.paper.command.screen.TrashPage;
+import top.vulpine.catalog.paper.command.screen.VersionsPage;
+import top.vulpine.catalog.paper.command.screen.widget.Format;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.TrashBin;
 import top.vulpine.catalog.trash.model.TrashEntry;
@@ -97,7 +110,7 @@ public final class MainCommand {
 
         List<String> authors = paper.getDescription().getAuthors();
 
-        send(sender, Messages.about(paper.getDescription().getVersion(),
+        send(sender, HelpPage.about(paper.getDescription().getVersion(),
                 authors.isEmpty() ? "Vulpine" : String.join(", ", authors)));
     }
 
@@ -105,7 +118,7 @@ public final class MainCommand {
     @Description("Every command")
     @RequiresPermission(CommandPermissions.ANY)
     public void help(CommandSender sender) {
-        send(sender, Messages.help(command -> PERMISSIONS.allows(sender, command)));
+        send(sender, HelpPage.help(command -> PERMISSIONS.allows(sender, command)));
     }
 
     /**
@@ -119,7 +132,7 @@ public final class MainCommand {
 
             WrappedTask waiting = paper.getScheduler().runLaterAsync(() -> {
                 if (!done.get()) {
-                    send(sender, Messages.stillWaiting());
+                    send(sender, Outcomes.stillWaiting());
                 }
             }, PATIENCE.toMillis(), TimeUnit.MILLISECONDS);
 
@@ -213,7 +226,7 @@ public final class MainCommand {
             ModrinthProject project = catalog.project(query);
 
             if (project == null) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -221,17 +234,17 @@ public final class MainCommand {
             InstalledJar untracked = tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null;
 
             if (untracked != null) {
-                send(sender, Messages.installedUntracked(project.title(), untracked.fileName()));
+                send(sender, Outcomes.installedUntracked(project.title(), untracked.fileName()));
                 return;
             }
 
             if (tracked != null && named == null) {
-                send(sender, Messages.alreadyInstalled(tracked));
+                send(sender, Outcomes.alreadyInstalled(tracked));
                 return;
             }
 
             if (tracked != null && tracked.isPinned()) {
-                send(sender, Messages.stillHeld(tracked.displayName()));
+                send(sender, Outcomes.stillHeld(tracked.displayName()));
                 return;
             }
 
@@ -239,8 +252,8 @@ public final class MainCommand {
 
             if (version == null) {
                 send(sender, named == null
-                        ? Messages.noBuild(project.title())
-                        : Messages.noVersion(project.title(), named));
+                        ? Outcomes.noBuild(project.title())
+                        : Outcomes.noVersion(project.title(), named));
                 return;
             }
 
@@ -282,12 +295,12 @@ public final class MainCommand {
                         rollback ? Event.ROLLED_BACK : Event.SWITCHED);
 
                 redraw(sender, screen(data));
-                send(sender, Messages.staged(tracked.displayName(), version.versionNumber()));
+                send(sender, Outcomes.staged(tracked.displayName(), version.versionNumber()));
 
                 // Keeps the next check from downloading the newer build again.
                 if (rollback && tracked.autoUpdate()) {
                     catalog.setAutoUpdate(tracked, false, sender.getName());
-                    send(sender, Messages.autoUpdateTurnedOff(tracked.versionNumber(), key(tracked)));
+                    send(sender, Outcomes.autoUpdateTurnedOff(tracked.versionNumber(), key(tracked)));
                 }
 
                 return;
@@ -299,12 +312,12 @@ public final class MainCommand {
 
             redraw(sender, screen(data));
             send(sender, pending.size() == 1
-                    ? Messages.installed(project.title(), version.versionNumber())
-                    : Messages.installedWith(project.title(), version.versionNumber(),
+                    ? Outcomes.installed(project.title(), version.versionNumber())
+                    : Outcomes.installedWith(project.title(), version.versionNumber(),
                             needed.stream().map(one -> one.project().title()).toList()));
 
         } catch (Exception e) {
-            send(sender, Messages.failed(rootMessage(e)));
+            send(sender, Outcomes.failed(rootMessage(e)));
         }
     }
 
@@ -350,7 +363,7 @@ public final class MainCommand {
                         ? tracked.projectId() : query);
 
                 if (project == null) {
-                    send(sender, Messages.unknownPlugin(query));
+                    send(sender, Outcomes.unknownPlugin(query));
                     return;
                 }
 
@@ -361,18 +374,18 @@ public final class MainCommand {
                         : catalog.compatibleVersions(project.id());
 
                 if (all) {
-                    send(sender, Messages.allVersions(project, builds, installed, untracked,
+                    send(sender, VersionsPage.allVersions(project, builds, installed, untracked,
                             catalog.gameVersion(), catalog.gameVersions(), incompatible, page,
                             screen(data)));
                     return;
                 }
 
-                send(sender, Messages.versions(project, catalog.gameVersion(), catalog.gameVersions(),
+                send(sender, VersionsPage.versions(project, catalog.gameVersion(), catalog.gameVersions(),
                         newestOfEachChannel(builds), installed, untracked, incompatible,
                         screen(data)));
 
             } catch (Exception e) {
-                send(sender, Messages.unreachable(rootMessage(e)));
+                send(sender, Outcomes.unreachable(rootMessage(e)));
             }
         });
     }
@@ -450,8 +463,8 @@ public final class MainCommand {
     public void reload(CommandSender sender) {
 
         send(sender, paper.loadConfiguration()
-                ? Messages.reloaded()
-                : Messages.configFailed());
+                ? Outcomes.reloaded()
+                : Outcomes.configFailed());
     }
 
     @Subcommand("settings")
@@ -463,7 +476,7 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
@@ -480,12 +493,12 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         catalog.setAutoUpdate(tracked, state.on(), sender.getName());
-        done(sender, context.take(sender), Messages.autoSet(tracked.displayName(), state.on()));
+        done(sender, context.take(sender), Outcomes.autoSet(tracked.displayName(), state.on()));
     }
 
     @Subcommand("soak")
@@ -498,19 +511,19 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         Integer minutes = parseSoak(window);
 
         if (minutes == null) {
-            send(sender, Messages.badSoak());
+            send(sender, Outcomes.badSoak());
             return;
         }
 
         catalog.setSoak(tracked, minutes, sender.getName());
-        done(sender, context.take(sender), Messages.soakSet(tracked.displayName(), minutes,
+        done(sender, context.take(sender), Outcomes.soakSet(tracked.displayName(), minutes,
                 catalog.defaultSoakMinutes()));
     }
 
@@ -566,12 +579,12 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         catalog.setChannel(tracked, channel, sender.getName());
-        done(sender, context.take(sender), Messages.channelSet(tracked.displayName(), channel));
+        done(sender, context.take(sender), Outcomes.channelSet(tracked.displayName(), channel));
     }
 
     @Subcommand("update")
@@ -591,7 +604,7 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(wanted);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(wanted));
+            send(sender, Outcomes.unknownPlugin(wanted));
             return;
         }
 
@@ -610,7 +623,7 @@ public final class MainCommand {
             UpdateCandidate candidate = candidateFor(tracked);
 
             if (candidate == null) {
-                send(sender, Messages.noUpdate(tracked.displayName()));
+                send(sender, Outcomes.noUpdate(tracked.displayName()));
                 return;
             }
 
@@ -639,10 +652,10 @@ public final class MainCommand {
             catalog.stage(candidate, sender.getName());
 
             redraw(sender, screen(data));
-            send(sender, Messages.staged(tracked.displayName(), candidate.to()));
+            send(sender, Outcomes.staged(tracked.displayName(), candidate.to()));
 
         } catch (Exception e) {
-            send(sender, Messages.failed(rootMessage(e)));
+            send(sender, Outcomes.failed(rootMessage(e)));
         }
     }
 
@@ -671,7 +684,7 @@ public final class MainCommand {
                 projectId = catalog.loggedProjectId(which);
 
                 if (projectId == null) {
-                    send(sender, Messages.unknownPlugin(which));
+                    send(sender, Outcomes.unknownPlugin(which));
                     return;
                 }
 
@@ -691,7 +704,7 @@ public final class MainCommand {
                 HistoryKind kind = HistoryKind.named(event);
 
                 if (kind == null) {
-                    send(sender, Messages.unknownKind(event));
+                    send(sender, Outcomes.unknownKind(event));
                     return;
                 }
 
@@ -700,7 +713,7 @@ public final class MainCommand {
                 command.append(" --event ").append(kind.label());
             }
 
-            send(sender, Messages.history(entries, Math.max(page, 1), label, command.toString()));
+            send(sender, HistoryPage.history(entries, Math.max(page, 1), label, command.toString()));
         });
     }
 
@@ -713,27 +726,27 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         String data = context.take(sender);
 
         if (!tracked.pendingRestart()) {
-            send(sender, Messages.nothingStaged(tracked.displayName()));
+            send(sender, Outcomes.nothingStaged(tracked.displayName()));
             return;
         }
 
         runAsync(sender, () -> {
 
             if (!catalog.cancelUpdate(tracked, sender.getName())) {
-                send(sender, Messages.failed("Could not delete the downloaded build for "
+                send(sender, Outcomes.failed("Could not delete the downloaded build for "
                         + tracked.displayName() + ", see the console."));
                 return;
             }
 
             redraw(sender, screen(data));
-            send(sender, Messages.cancelled(tracked.displayName()));
+            send(sender, Outcomes.cancelled(tracked.displayName()));
         });
     }
 
@@ -747,7 +760,7 @@ public final class MainCommand {
                 List<UpdateCandidate> candidates = catalog.openUpdates();
 
                 if (candidates.isEmpty()) {
-                    send(sender, Messages.upToDate());
+                    send(sender, Outcomes.upToDate());
                     return;
                 }
 
@@ -762,7 +775,7 @@ public final class MainCommand {
                                 catalog.missingFor(candidate.version());
 
                         if (!missing.isEmpty()) {
-                            failures.add(Messages.needsDependencies(
+                            failures.add(Outcomes.needsDependencies(
                                     candidate.plugin().displayName(), missing.size()));
                             continue;
                         }
@@ -772,7 +785,7 @@ public final class MainCommand {
                     } catch (Exception e) {
                         // One plugin failing is not a reason to abandon the rest of the queue, and
                         // the reason is worth more after the list than buried above it.
-                        failures.add(Messages.stageFailed(candidate.plugin().displayName(),
+                        failures.add(Outcomes.stageFailed(candidate.plugin().displayName(),
                                 rootMessage(e)));
                     }
                 }
@@ -780,7 +793,7 @@ public final class MainCommand {
                 redraw(sender, screen(data));
 
                 if (staged > 0) {
-                    send(sender, Messages.stagedAll(staged));
+                    send(sender, Outcomes.stagedAll(staged));
                 }
 
                 for (Component failure : failures) {
@@ -788,7 +801,7 @@ public final class MainCommand {
                 }
 
             } catch (Exception e) {
-                send(sender, Messages.failed(rootMessage(e)));
+                send(sender, Outcomes.failed(rootMessage(e)));
             }
         });
     }
@@ -802,12 +815,12 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         if (catalog.isSelf(tracked)) {
-            send(sender, Messages.cannotRemoveSelf(tracked.displayName()));
+            send(sender, Outcomes.cannotRemoveSelf(tracked.displayName()));
             return;
         }
 
@@ -826,7 +839,7 @@ public final class MainCommand {
                     List<TrackedPlugin> dependents = catalog.dependentsOf(tracked);
 
                     if (!dependents.isEmpty()) {
-                        send(sender, Messages.confirmRemove(tracked, dependents, Press.of(data)));
+                        send(sender, RemovePage.confirmRemove(tracked, dependents, Press.of(data)));
                         return;
                     }
                 }
@@ -837,11 +850,11 @@ public final class MainCommand {
                 TrashBin.Result result = catalog.uninstall(tracked, sender.getName());
 
                 redraw(sender, screen(data));
-                send(sender, Messages.removed(name, loaded, result == null ? null : result.entry(),
+                send(sender, Outcomes.removed(name, loaded, result == null ? null : result.entry(),
                         screen(data)));
 
             } catch (Exception e) {
-                send(sender, Messages.failed(rootMessage(e)));
+                send(sender, Outcomes.failed(rootMessage(e)));
             }
         });
     }
@@ -868,7 +881,7 @@ public final class MainCommand {
             ModrinthProject project = projectFor(query);
 
             if (project == null) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -876,8 +889,8 @@ public final class MainCommand {
 
             if (version == null) {
                 send(sender, wanted == null
-                        ? Messages.noBuild(project.title())
-                        : Messages.noVersion(project.title(), wanted));
+                        ? Outcomes.noBuild(project.title())
+                        : Outcomes.noVersion(project.title(), wanted));
                 return;
             }
 
@@ -887,10 +900,10 @@ public final class MainCommand {
             declared.addAll(resolution.optional());
             declared.addAll(resolution.conflicts());
 
-            send(sender, Messages.dependencies(project, version, catalog.named(declared), from));
+            send(sender, DependenciesPage.dependencies(project, version, catalog.named(declared), from));
 
         } catch (Exception e) {
-            send(sender, Messages.failed(rootMessage(e)));
+            send(sender, Outcomes.failed(rootMessage(e)));
         }
     }
 
@@ -921,7 +934,7 @@ public final class MainCommand {
         String replaces = installed != null && installed.pendingRestart()
                 ? installed.stagedVersionNumber() : null;
 
-        send(sender, Messages.change(change, project.title(), project.slug(), from, replaces, version,
+        send(sender, ChangePage.change(change, project.title(), project.slug(), from, replaces, version,
                 notFor, catalog.named(needs), asked, Trail.within(here, asked == null ? null : asked.screen()), command));
     }
 
@@ -999,7 +1012,7 @@ public final class MainCommand {
 
     private void showTrash(CommandSender sender, int page) {
         abandonConfirmation(sender);
-        send(sender, Messages.trash(catalog.trashed(),
+        send(sender, TrashPage.trash(catalog.trashed(),
                 paper.getConfiguration().trash.retentionDays, page));
     }
 
@@ -1021,17 +1034,17 @@ public final class MainCommand {
                 TrashEntry entry = resolveTrashed(query);
 
                 if (entry == null) {
-                    send(sender, Messages.nothingToRestore());
+                    send(sender, Outcomes.nothingToRestore());
                     return;
                 }
 
                 TrackedPlugin tracked = catalog.restore(entry, sender.getName());
 
                 redraw(sender, screen(data));
-                send(sender, Messages.restored(entry.displayName(), tracked != null));
+                send(sender, Outcomes.restored(entry.displayName(), tracked != null));
 
             } catch (Exception e) {
-                send(sender, Messages.failed(rootMessage(e)));
+                send(sender, Outcomes.failed(rootMessage(e)));
             }
         });
     }
@@ -1059,17 +1072,17 @@ public final class MainCommand {
                 TrashEntry entry = resolveTrashed(query);
 
                 if (entry == null) {
-                    send(sender, Messages.nothingToRestore());
+                    send(sender, Outcomes.nothingToRestore());
                     return;
                 }
 
                 catalog.discardTrashed(entry, sender.getName());
 
                 redraw(sender, screen(data));
-                send(sender, Messages.discarded(entry.displayName()));
+                send(sender, Outcomes.discarded(entry.displayName()));
 
             } catch (Exception e) {
-                send(sender, Messages.failed(rootMessage(e)));
+                send(sender, Outcomes.failed(rootMessage(e)));
             }
         });
     }
@@ -1083,22 +1096,22 @@ public final class MainCommand {
                 int waiting = catalog.trashed().size();
 
                 if (waiting == 0) {
-                    send(sender, Messages.trashAlreadyEmpty());
+                    send(sender, Outcomes.trashAlreadyEmpty());
                     return;
                 }
 
                 if (!confirmed(sender, "empty", data)) {
-                    send(sender, Messages.confirmEmpty(waiting));
+                    send(sender, TrashPage.confirmEmpty(waiting));
                     return;
                 }
 
                 int deleted = catalog.emptyTrash(sender.getName());
 
                 redraw(sender, screen(data));
-                send(sender, Messages.emptied(deleted));
+                send(sender, Outcomes.emptied(deleted));
 
             } catch (Exception e) {
-                send(sender, Messages.failed(rootMessage(e)));
+                send(sender, Outcomes.failed(rootMessage(e)));
             }
         });
     }
@@ -1143,7 +1156,7 @@ public final class MainCommand {
             TrackedPlugin tracked = resolve(query);
 
             if (tracked == null) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -1156,7 +1169,7 @@ public final class MainCommand {
             }
 
             catalog.untrack(tracked, sender.getName());
-            done(sender, data, Messages.untracked(name));
+            done(sender, data, Outcomes.untracked(name));
         });
     }
 
@@ -1173,16 +1186,16 @@ public final class MainCommand {
             InstalledJar jar = resolveUntracked(query);
 
             if (jar == null) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
             if (!catalog.track(jar, sender.getName())) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
-            done(sender, data, Messages.tracked(Messages.shownName(jar)));
+            done(sender, data, Outcomes.tracked(Format.shownName(jar)));
         });
     }
 
@@ -1198,7 +1211,7 @@ public final class MainCommand {
 
         for (InstalledJar jar : catalog.untracked()) {
             if (jar.fileName().equalsIgnoreCase(wanted)
-                    || Messages.shownName(jar).equalsIgnoreCase(wanted)) {
+                    || Format.shownName(jar).equalsIgnoreCase(wanted)) {
                 return jar;
             }
         }
@@ -1227,12 +1240,12 @@ public final class MainCommand {
         TrackedPlugin tracked = resolve(query);
 
         if (tracked == null) {
-            send(sender, Messages.unknownPlugin(query));
+            send(sender, Outcomes.unknownPlugin(query));
             return;
         }
 
         catalog.setHeld(tracked, held, sender.getName());
-        done(sender, context.take(sender), Messages.held(tracked.displayName(), held));
+        done(sender, context.take(sender), Outcomes.held(tracked.displayName(), held));
     }
 
     // --- shared ------------------------------------------------------------------------
@@ -1293,7 +1306,7 @@ public final class MainCommand {
      */
     private void showSettings(CommandSender sender, TrackedPlugin tracked, String from) {
         abandonConfirmation(sender);
-        send(sender, Messages.settings(tracked, catalog.defaultSoakMinutes(), from));
+        send(sender, SettingsPage.settings(tracked, catalog.defaultSoakMinutes(), from));
     }
 
     private static String key(TrackedPlugin plugin) {
@@ -1355,7 +1368,7 @@ public final class MainCommand {
         abandonConfirmation(sender);
 
         if (catalog.getTracking().size() == 0 && catalog.untracked().isEmpty()) {
-            send(sender, Messages.nothingTracked());
+            send(sender, Outcomes.nothingTracked());
             return;
         }
 
@@ -1376,7 +1389,7 @@ public final class MainCommand {
             notEnabled.put(failure.plugin().projectId(), failure);
         }
 
-        send(sender, Messages.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
+        send(sender, ListPage.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
                 catalog.ownFileName(), catalog.untracked(), filters,
                 catalog.getUpdates().checkedAt(), catalog.getUpdates().unreachable()));
     }
@@ -1394,7 +1407,7 @@ public final class MainCommand {
             ModrinthProject project = projectFor(query);
 
             if (project == null) {
-                send(sender, Messages.unknownPlugin(query));
+                send(sender, Outcomes.unknownPlugin(query));
                 return;
             }
 
@@ -1405,7 +1418,7 @@ public final class MainCommand {
             List<ModrinthVersion> compatible = compatibleOrEmpty(project.id());
             ModrinthVersion latest = newestOn(compatible, channel);
 
-            send(sender, Messages.project(project, author(project.id()), latest,
+            send(sender, InfoPage.project(project, author(project.id()), latest,
                     Projects.installTarget(compatible), tracked,
                     tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null,
                     catalog.isSelf(tracked),
@@ -1414,7 +1427,7 @@ public final class MainCommand {
                     catalog.platformLoaders(), catalog.gameVersions()));
 
         } catch (Exception e) {
-            send(sender, Messages.unreachable(rootMessage(e)));
+            send(sender, Outcomes.unreachable(rootMessage(e)));
         }
     }
 
@@ -1433,8 +1446,8 @@ public final class MainCommand {
 
         try {
 
-            SearchResults results = catalog.search(query, Messages.PAGE,
-                    (page - 1) * Messages.PAGE);
+            SearchResults results = catalog.search(query, SearchPage.PAGE,
+                    (page - 1) * SearchPage.PAGE);
 
             // Text search does not match project ids, so a query that found nothing and could
             // be one is worth one direct lookup before giving up.
@@ -1443,10 +1456,10 @@ public final class MainCommand {
                 return;
             }
 
-            send(sender, Messages.search(query, results, page, trackedProjectIds()));
+            send(sender, SearchPage.search(query, results, page, trackedProjectIds()));
 
         } catch (Exception e) {
-            send(sender, Messages.unreachable(rootMessage(e)));
+            send(sender, Outcomes.unreachable(rootMessage(e)));
         }
     }
 

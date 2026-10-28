@@ -9,8 +9,8 @@ import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.paper.CatalogPaper;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.paper.command.MainCommand;
-import top.vulpine.catalog.paper.command.Messages;
 import top.vulpine.catalog.paper.command.Notice;
+import top.vulpine.catalog.paper.command.screen.JoinNotice;
 import top.vulpine.catalog.paper.util.PermissionChecker;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
@@ -99,7 +99,7 @@ public final class JoinNotifier implements Listener {
 
         player.sendMessage(Component.empty());
 
-        for (Component line : Messages.notice(notices, hasAvailable(notices))) {
+        for (Component line : JoinNotice.notice(notices, hasAvailable(notices))) {
 
             Component shown = MainCommand.PERMISSIONS.shown(player, line);
 
@@ -142,7 +142,7 @@ public final class JoinNotifier implements Listener {
                     back ? tracked.previousVersionNumber() + " → " + tracked.versionNumber()
                             : tracked.versionNumber(),
                     failure.reason(),
-                    back ? Messages.rollbackCommand(tracked) : null,
+                    back ? JoinNotice.rollbackCommand(tracked) : null,
                     tracked.previousVersionNumber(),
                     failure.previousRemoved()));
         }

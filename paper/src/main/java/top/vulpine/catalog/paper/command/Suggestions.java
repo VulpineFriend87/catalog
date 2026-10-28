@@ -4,11 +4,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import revxrsal.commands.autocomplete.SuggestionProvider;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
-import top.vulpine.catalog.Catalog;
-import top.vulpine.catalog.jar.model.InstalledJar;
 import revxrsal.commands.node.ExecutionContext;
 import revxrsal.commands.stream.StringStream;
+import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.paper.CatalogPaper;
+import top.vulpine.catalog.paper.command.screen.widget.Format;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.model.TrashEntry;
 
@@ -40,7 +41,7 @@ public final class Suggestions {
             List<String> names = new ArrayList<>();
 
             for (InstalledJar jar : JavaPlugin.getPlugin(CatalogPaper.class).getCatalog().untracked()) {
-                names.add(Messages.shownName(jar));
+                names.add(Format.shownName(jar));
             }
 
             return matching(context, names);
