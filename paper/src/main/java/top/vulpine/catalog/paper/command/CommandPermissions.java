@@ -3,7 +3,6 @@ package top.vulpine.catalog.paper.command;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import revxrsal.commands.annotation.Command;
 import revxrsal.commands.annotation.Subcommand;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.command.screen.widget.Widgets;
@@ -13,6 +12,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -37,40 +37,43 @@ public final class CommandPermissions {
     }
 
     /**
-     * @param commands a class annotated with {@link Command}
-     * @return the permissions of every method on it that has a {@link RequiresPermission}
+     * @param roots    the names the command answers to
+     * @param commands the classes holding its subcommands
+     * @return the permissions of every method on them that has a {@link RequiresPermission}
      */
-    public static CommandPermissions of(Class<?> commands) {
+    public static CommandPermissions of(List<String> roots, List<Class<?>> commands) {
 
-        Set<String> roots = new HashSet<>();
+        Set<String> names = new HashSet<>();
 
-        for (String root : commands.getAnnotation(Command.class).value()) {
-            roots.add(root.toLowerCase(Locale.ROOT));
+        for (String root : roots) {
+            names.add(root.toLowerCase(Locale.ROOT));
         }
 
         Map<String, String> nodes = new HashMap<>();
 
-        for (Method method : commands.getDeclaredMethods()) {
+        for (Class<?> type : commands) {
+            for (Method method : type.getDeclaredMethods()) {
 
-            RequiresPermission permission = method.getAnnotation(RequiresPermission.class);
+                RequiresPermission permission = method.getAnnotation(RequiresPermission.class);
 
-            if (permission == null) {
-                continue;
-            }
+                if (permission == null) {
+                    continue;
+                }
 
-            Subcommand subcommand = method.getAnnotation(Subcommand.class);
+                Subcommand subcommand = method.getAnnotation(Subcommand.class);
 
-            if (subcommand == null) {
-                nodes.put("", permission.value());
-                continue;
-            }
+                if (subcommand == null) {
+                    nodes.put("", permission.value());
+                    continue;
+                }
 
-            for (String path : subcommand.value()) {
-                nodes.put(path.toLowerCase(Locale.ROOT), permission.value());
+                for (String path : subcommand.value()) {
+                    nodes.put(path.toLowerCase(Locale.ROOT), permission.value());
+                }
             }
         }
 
-        return new CommandPermissions(roots, nodes);
+        return new CommandPermissions(names, nodes);
     }
 
     /**

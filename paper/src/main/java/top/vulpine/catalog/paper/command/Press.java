@@ -48,6 +48,37 @@ public record Press(String screen, boolean confirmed, String answer) {
     }
 
     /**
+     * The screen a payload points at.
+     */
+    public static String screenOf(String data) {
+        Press press = of(data);
+        return press == null ? null : press.screen();
+    }
+
+    /**
+     * Which answer to the dependency question a payload carries.
+     */
+    public static String intent(String data) {
+        Press press = of(data);
+        return press == null ? null : press.answer();
+    }
+
+    /**
+     * Whether a payload asks to install without what is required.
+     */
+    public static boolean alone(String data) {
+        return ClickContext.ALONE.equals(intent(data));
+    }
+
+    /**
+     * Whether a payload redraws the confirmation screen {@code here}. A redraw never confirms.
+     */
+    public static boolean redrawing(String data, String here) {
+        Press press = of(data);
+        return press != null && !press.confirmed() && here.equals(Trail.current(press.screen()));
+    }
+
+    /**
      * @return this press, as the confirmation of the question it raised
      */
     public Press confirming() {

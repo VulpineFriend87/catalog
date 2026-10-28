@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("CommandPermissions")
 class CommandPermissionsTest {
 
-    private static final CommandPermissions PERMISSIONS = MainCommand.PERMISSIONS;
+    private static final CommandPermissions PERMISSIONS = Commands.PERMISSIONS;
 
     @Test
     @DisplayName("a subcommand needs the node on its method")

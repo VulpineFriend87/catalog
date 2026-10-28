@@ -15,7 +15,7 @@ import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.CatalogAction;
 import top.vulpine.catalog.paper.command.ClickCommand;
 import top.vulpine.catalog.paper.command.ClickContext;
-import top.vulpine.catalog.paper.command.MainCommand;
+import top.vulpine.catalog.paper.command.Commands;
 import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.paper.config.Config;
 import top.vulpine.catalog.paper.notify.JoinNotifier;
@@ -108,7 +108,8 @@ public final class CatalogPaper extends JavaPlugin {
 
         ClickContext clicks = new ClickContext();
 
-        lamp.register(new MainCommand(this, catalog, clicks), new ClickCommand(clicks));
+        lamp.register(new Commands(this, catalog, clicks).registries().toArray());
+        lamp.register(new ClickCommand(clicks));
         clicks.dispatcher(lamp);
 
         getServer().getPluginManager().registerEvents(enableCheck, this);

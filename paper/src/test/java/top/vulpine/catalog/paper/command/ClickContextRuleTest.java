@@ -23,8 +23,7 @@ import java.util.regex.Pattern;
 @DisplayName("click context")
 class ClickContextRuleTest {
 
-    private static final Path SOURCE =
-            Path.of("src/main/java/top/vulpine/catalog/paper/command/MainCommand.java");
+    private static final Path SOURCES = Path.of("src/main/java/top/vulpine/catalog/paper/command");
 
     private static final Pattern METHOD =
             Pattern.compile("^ {4}(?:public|private)\\s+[\\w<>,\\[\\]\\s]+\\s(\\w+)\\(");
@@ -33,28 +32,33 @@ class ClickContextRuleTest {
     @DisplayName("every command reads its screen before going async")
     void takeComesBeforeAsync() throws IOException {
 
-        List<String> lines = Files.readAllLines(SOURCE, StandardCharsets.UTF_8);
         List<String> offenders = new ArrayList<>();
 
-        String method = "?";
-        boolean async = false;
+        for (Class<?> type : Commands.TYPES) {
 
-        for (int i = 0; i < lines.size(); i++) {
+            List<String> lines = Files.readAllLines(SOURCES.resolve(type.getSimpleName() + ".java"),
+                    StandardCharsets.UTF_8);
 
-            String line = lines.get(i);
-            Matcher matcher = METHOD.matcher(line);
+            String method = "?";
+            boolean async = false;
 
-            if (matcher.find()) {
-                method = matcher.group(1);
-                async = false;
-            }
+            for (int i = 0; i < lines.size(); i++) {
 
-            if (line.contains("runAsync")) {
-                async = true;
-            }
+                String line = lines.get(i);
+                Matcher matcher = METHOD.matcher(line);
 
-            if (line.contains("context.take(sender)") && async) {
-                offenders.add(method + " at line " + (i + 1));
+                if (matcher.find()) {
+                    method = matcher.group(1);
+                    async = false;
+                }
+
+                if (line.contains("runAsync")) {
+                    async = true;
+                }
+
+                if (line.contains("context.take(sender)") && async) {
+                    offenders.add(type.getSimpleName() + "." + method + " at line " + (i + 1));
+                }
             }
         }
 

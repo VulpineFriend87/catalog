@@ -9,8 +9,8 @@ import revxrsal.commands.process.SenderResolver;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-@DisplayName("MainCommand")
-class MainCommandTest {
+@DisplayName("Commands")
+class CommandsTest {
 
     /**
      * Registration is where Lamp checks the shape of every command, and none of what it checks is
@@ -46,7 +46,10 @@ class MainCommandTest {
                 .build();
 
         // Never dereferenced: registration reflects over the class, it does not call anything.
-        assertDoesNotThrow(() -> lamp.register(new MainCommand(null, null, null), new ClickCommand(null)));
+        assertDoesNotThrow(() -> {
+            lamp.register(new Commands(null, null, null).registries().toArray());
+            lamp.register(new ClickCommand(null));
+        });
     }
 
 }
