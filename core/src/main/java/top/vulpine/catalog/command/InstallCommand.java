@@ -7,10 +7,10 @@ import revxrsal.commands.annotation.Single;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.Switch;
 import revxrsal.commands.orphan.OrphanCommand;
-import top.vulpine.catalog.command.flow.ChangeFlow;
-import top.vulpine.catalog.command.flow.Chat;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.permission.RequiresPermission;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Installs;
 import top.vulpine.catalog.platform.Viewer;
 
 /**
@@ -22,12 +22,12 @@ public final class InstallCommand implements OrphanCommand {
 
     private final Chat chat;
 
-    private final ChangeFlow changes;
+    private final Installs installs;
 
-    public InstallCommand(ClickContext context, Chat chat, ChangeFlow changes) {
+    public InstallCommand(ClickContext context, Chat chat, Installs installs) {
         this.context = context;
         this.chat = chat;
-        this.changes = changes;
+        this.installs = installs;
     }
 
     @Subcommand("install")
@@ -42,7 +42,7 @@ public final class InstallCommand implements OrphanCommand {
         String named = wanted == null || ClickContext.strip(wanted).isEmpty()
                 ? null : ClickContext.strip(wanted);
 
-        chat.runAsync(viewer, () -> changes.runInstall(viewer, query, named, incompatible, data));
+        chat.runAsync(viewer, () -> installs.runInstall(viewer, query, named, incompatible, data));
     }
 
 }

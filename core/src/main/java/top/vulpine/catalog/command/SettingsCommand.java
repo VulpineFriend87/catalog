@@ -9,20 +9,20 @@ import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.argument.Toggle;
-import top.vulpine.catalog.command.flow.Lookup;
-import top.vulpine.catalog.command.flow.Redraw;
-import top.vulpine.catalog.command.flow.Screens;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.Outcomes;
+import top.vulpine.catalog.command.service.Lookup;
+import top.vulpine.catalog.command.service.Redraw;
+import top.vulpine.catalog.command.service.Screens;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.Locale;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * One plugin's settings.

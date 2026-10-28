@@ -1,10 +1,9 @@
-package top.vulpine.catalog.paper.config;
+package top.vulpine.catalog.config;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
-import top.vulpine.catalog.Configuration;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.tracking.model.TrackingDefaults;
 import top.vulpine.commons.log.LogLevel;
@@ -15,7 +14,7 @@ import top.vulpine.commons.log.LogLevel;
 @Header("hash, so it always knows exactly what you have installed. Anything it does not")
 @Header("recognise is left completely alone.")
 @Header("")
-public class Config extends OkaeriConfig implements Configuration {
+public class Config extends OkaeriConfig {
 
     @CustomKey("modrinth")
     public Modrinth modrinth = new Modrinth();
@@ -97,17 +96,9 @@ public class Config extends OkaeriConfig implements Configuration {
     @CustomKey("log_level")
     public LogLevel logLevel = LogLevel.INFO;
 
-    @Override
-    public String modrinthToken() {
-        return modrinth.token;
-    }
-
-    @Override
-    public boolean autoTrack() {
-        return tracking.autoTrack;
-    }
-
-    @Override
+    /**
+     * @return what a plugin starts with when it is adopted or installed
+     */
     public TrackingDefaults defaults() {
 
         return TrackingDefaults.builder()
@@ -115,16 +106,6 @@ public class Config extends OkaeriConfig implements Configuration {
                 .autoUpdate(tracking.defaults.autoUpdate)
                 .soakMinutes(tracking.defaults.soakMinutes)
                 .build();
-    }
-
-    @Override
-    public int checkIntervalMinutes() {
-        return updates.checkIntervalMinutes;
-    }
-
-    @Override
-    public int trashRetentionDays() {
-        return trash.retentionDays;
     }
 
 }

@@ -13,7 +13,7 @@ import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * The commands about Catalog itself.

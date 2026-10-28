@@ -7,8 +7,8 @@ import revxrsal.commands.annotation.Named;
 import revxrsal.commands.annotation.Sized;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.orphan.OrphanCommand;
-import top.vulpine.catalog.command.flow.Screens;
 import top.vulpine.catalog.command.permission.RequiresPermission;
+import top.vulpine.catalog.command.service.Screens;
 import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;

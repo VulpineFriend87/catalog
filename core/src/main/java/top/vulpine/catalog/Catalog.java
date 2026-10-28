@@ -1,6 +1,7 @@
 package top.vulpine.catalog;
 
 import lombok.Getter;
+import top.vulpine.catalog.config.Config;
 import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.history.History;
 import top.vulpine.catalog.history.HistoryEntry;
@@ -50,7 +51,7 @@ public final class Catalog {
 
     private final Platform platform;
 
-    private final Supplier<Configuration> configuration;
+    private final Supplier<Config> configuration;
 
     /** When this server came up. */
     private final Instant startedAt = Instant.now();
@@ -77,7 +78,7 @@ public final class Catalog {
     /**
      * @param configuration the current configuration, read again after a reload
      */
-    public Catalog(Platform platform, Supplier<Configuration> configuration) {
+    public Catalog(Platform platform, Supplier<Config> configuration) {
         this.platform = platform;
         this.configuration = configuration;
     }
@@ -93,7 +94,7 @@ public final class Catalog {
 
         this.modrinth = ModrinthClient.builder()
                 .userAgent("VulpineFriend87/Catalog/" + platform.version() + " (vulpine.top)")
-                .token(configuration.get().modrinthToken())
+                .token(configuration.get().modrinth.token)
                 .cacheDirectory(data.resolve("cache"))
                 .build();
 
@@ -115,10 +116,10 @@ public final class Catalog {
                 exitTasks);
         this.installer = new Installer(platform, downloader, tracking, removals, this::defaults, history);
         this.updates = new Updates(platform, modrinth, tracking, installer,
-                () -> configuration.get().defaults().soakMinutes(), projects::dependenciesOf,
+                () -> configuration.get().tracking.defaults.soakMinutes, projects::dependenciesOf,
                 history, () -> library.index());
         this.library = new Library(platform, modrinth, tracking, ignored, this::defaults,
-                () -> configuration.get().autoTrack(), history);
+                () -> configuration.get().tracking.autoTrack, history);
         this.dependents = new Dependents(tracking, hashes -> modrinth.identify(hashes).join());
         this.enableCheck = new EnableCheck(platform, library, history, modrinth);
 
@@ -171,7 +172,7 @@ public final class Catalog {
 
     private void scheduleUpdateChecks() {
 
-        int minutes = configuration.get().checkIntervalMinutes();
+        int minutes = configuration.get().updates.checkIntervalMinutes;
 
         if (minutes <= 0) {
             Logger.debug(CatalogAction.SETUP, "Periodic update checks are off.");
@@ -187,7 +188,7 @@ public final class Catalog {
      */
     private void pruneTrash() {
 
-        int days = configuration.get().trashRetentionDays();
+        int days = configuration.get().trash.retentionDays;
         int dropped = removals.prune(days);
 
         if (dropped > 0) {

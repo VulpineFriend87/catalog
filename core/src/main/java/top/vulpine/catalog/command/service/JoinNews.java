@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.screen.JoinNotice;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * What to tell staff when they join.

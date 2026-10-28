@@ -7,18 +7,18 @@ import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.Suggestions;
-import top.vulpine.catalog.command.flow.ChangeFlow;
-import top.vulpine.catalog.command.flow.Chat;
-import top.vulpine.catalog.command.flow.Lookup;
-import top.vulpine.catalog.command.flow.Redraw;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.Outcomes;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Installs;
+import top.vulpine.catalog.command.service.Lookup;
+import top.vulpine.catalog.command.service.Redraw;
 import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * Downloading and cancelling updates.
@@ -33,16 +33,16 @@ public final class UpdateCommand implements OrphanCommand {
 
     private final Lookup lookup;
 
-    private final ChangeFlow changes;
+    private final Installs installs;
 
     private final Redraw redraw;
 
-    public UpdateCommand(Catalog catalog, ClickContext context, Chat chat, Lookup lookup, ChangeFlow changes, Redraw redraw) {
+    public UpdateCommand(Catalog catalog, ClickContext context, Chat chat, Lookup lookup, Installs installs, Redraw redraw) {
         this.catalog = catalog;
         this.context = context;
         this.chat = chat;
         this.lookup = lookup;
-        this.changes = changes;
+        this.installs = installs;
         this.redraw = redraw;
     }
 
@@ -56,7 +56,7 @@ public final class UpdateCommand implements OrphanCommand {
         String data = context.take(viewer);
 
         if (wanted.equalsIgnoreCase("all")) {
-            changes.updateAll(viewer, data);
+            installs.updateAll(viewer, data);
             return;
         }
 
@@ -67,7 +67,7 @@ public final class UpdateCommand implements OrphanCommand {
             return;
         }
 
-        chat.runAsync(viewer, () -> changes.runUpdate(viewer, tracked, data));
+        chat.runAsync(viewer, () -> installs.runUpdate(viewer, tracked, data));
     }
 
     @Subcommand("cancel")

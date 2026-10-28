@@ -5,11 +5,11 @@ import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.Switch;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.command.argument.ListFilter;
-import top.vulpine.catalog.command.flow.Chat;
-import top.vulpine.catalog.command.flow.Screens;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.RequiresPermission;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Screens;
 import top.vulpine.catalog.platform.Viewer;
 
 import java.util.EnumSet;

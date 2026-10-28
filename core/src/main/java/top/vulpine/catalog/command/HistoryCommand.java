@@ -10,17 +10,17 @@ import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.HistoryKind;
 import top.vulpine.catalog.command.argument.Suggestions;
-import top.vulpine.catalog.command.flow.Chat;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.HistoryPage;
 import top.vulpine.catalog.command.screen.Outcomes;
+import top.vulpine.catalog.command.service.Chat;
 import top.vulpine.catalog.history.HistoryEntry;
 import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * {@code /catalog history}.

@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.platform.Viewer;

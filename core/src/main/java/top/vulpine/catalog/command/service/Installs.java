@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.Catalog;
@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * Installing, updating and switching builds, with the question asked first.
+ * Everything that puts a build on the server: install, update, switch and roll back.
  */
-public final class ChangeFlow {
+public final class Installs {
 
     private final Catalog catalog;
 
@@ -44,7 +44,7 @@ public final class ChangeFlow {
 
     private final Redraw redraw;
 
-    public ChangeFlow(Catalog catalog, Chat chat, Confirmations confirmations, Lookup lookup, Screens screens, Redraw redraw) {
+    public Installs(Catalog catalog, Chat chat, Confirmations confirmations, Lookup lookup, Screens screens, Redraw redraw) {
         this.catalog = catalog;
         this.chat = chat;
         this.confirmations = confirmations;

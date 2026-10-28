@@ -9,6 +9,7 @@ dependencies {
     compileOnly(libs.commons)
     compileOnly(libs.adventure.api)
     compileOnly(libs.lamp.common)
+    compileOnly(libs.okaeri.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.gson)

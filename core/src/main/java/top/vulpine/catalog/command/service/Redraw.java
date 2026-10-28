@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.command.navigation.Press;
@@ -9,7 +9,7 @@ import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 import java.util.function.Supplier;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * Draws the screen a button was pressed on again.
@@ -23,13 +23,13 @@ public final class Redraw {
     private final Screens screens;
 
     /** Asked for when needed, because it redraws through this. */
-    private final Supplier<ChangeFlow> changes;
+    private final Supplier<Installs> installs;
 
-    public Redraw(Chat chat, Lookup lookup, Screens screens, Supplier<ChangeFlow> changes) {
+    public Redraw(Chat chat, Lookup lookup, Screens screens, Supplier<Installs> installs) {
         this.chat = chat;
         this.lookup = lookup;
         this.screens = screens;
-        this.changes = changes;
+        this.installs = installs;
     }
 
     /**
@@ -108,14 +108,14 @@ public final class Redraw {
         public void change(Screen.ChangeScreen screen) {
 
             if (!screen.verb().equals("update")) {
-                changes.get().runInstall(viewer, screen.slug(), screen.versionId(), true, data);
+                installs.get().runInstall(viewer, screen.slug(), screen.versionId(), true, data);
                 return;
             }
 
             TrackedPlugin tracked = lookup.resolve(screen.slug());
 
             if (tracked != null) {
-                changes.get().runUpdate(viewer, tracked, data);
+                installs.get().runUpdate(viewer, tracked, data);
             }
         }
 

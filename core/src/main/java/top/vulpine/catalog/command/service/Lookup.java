@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.navigation.ClickContext;
@@ -171,7 +171,7 @@ public final class Lookup {
     }
 
     public ReleaseChannel defaultChannel() {
-        return catalog.getConfiguration().get().defaults().channel();
+        return catalog.getConfiguration().get().tracking.defaults.channel;
     }
 
     /**

@@ -11,14 +11,14 @@ import revxrsal.commands.annotation.Switch;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.Suggestions;
-import top.vulpine.catalog.command.flow.Chat;
-import top.vulpine.catalog.command.flow.Confirmations;
-import top.vulpine.catalog.command.flow.Lookup;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.screen.VersionsPage;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Confirmations;
+import top.vulpine.catalog.command.service.Lookup;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
@@ -29,7 +29,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * {@code /catalog versions}.

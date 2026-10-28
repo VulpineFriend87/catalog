@@ -4,14 +4,14 @@ import revxrsal.commands.orphan.OrphanCommand;
 import revxrsal.commands.orphan.OrphanRegistry;
 import revxrsal.commands.orphan.Orphans;
 import top.vulpine.catalog.Catalog;
-import top.vulpine.catalog.command.flow.ChangeFlow;
-import top.vulpine.catalog.command.flow.Chat;
-import top.vulpine.catalog.command.flow.Confirmations;
-import top.vulpine.catalog.command.flow.Lookup;
-import top.vulpine.catalog.command.flow.Redraw;
-import top.vulpine.catalog.command.flow.Screens;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.permission.CommandPermissions;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Confirmations;
+import top.vulpine.catalog.command.service.Installs;
+import top.vulpine.catalog.command.service.Lookup;
+import top.vulpine.catalog.command.service.Redraw;
+import top.vulpine.catalog.command.service.Screens;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +42,7 @@ public final class Commands {
      */
     public static final int MAX_WORDS = 12;
 
-    private final ChangeFlow changes;
+    private final Installs installs;
 
     private final List<OrphanCommand> commands;
 
@@ -52,17 +52,17 @@ public final class Commands {
         Confirmations confirmations = new Confirmations();
         Lookup lookup = new Lookup(catalog);
         Screens screens = new Screens(catalog, chat, confirmations, lookup);
-        Redraw redraw = new Redraw(chat, lookup, screens, this::changes);
+        Redraw redraw = new Redraw(chat, lookup, screens, this::installs);
 
-        this.changes = new ChangeFlow(catalog, chat, confirmations, lookup, screens, redraw);
+        this.installs = new Installs(catalog, chat, confirmations, lookup, screens, redraw);
 
         this.commands = List.of(
                 new CatalogCommand(catalog),
                 new ListCommand(context, chat, screens),
                 new InfoCommand(context, chat, screens),
                 new VersionsCommand(catalog, context, chat, confirmations, lookup),
-                new InstallCommand(context, chat, changes),
-                new UpdateCommand(catalog, context, chat, lookup, changes, redraw),
+                new InstallCommand(context, chat, installs),
+                new UpdateCommand(catalog, context, chat, lookup, installs, redraw),
                 new RemoveCommand(catalog, context, chat, confirmations, lookup, redraw),
                 new TrashCommand(catalog, context, chat, confirmations, lookup, screens, redraw),
                 new SettingsCommand(catalog, context, lookup, screens, redraw),
@@ -70,8 +70,8 @@ public final class Commands {
                 new SearchCommand(screens));
     }
 
-    private ChangeFlow changes() {
-        return changes;
+    private Installs installs() {
+        return installs;
     }
 
     /**

@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.Catalog;

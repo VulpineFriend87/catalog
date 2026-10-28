@@ -7,16 +7,16 @@ import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.Suggestions;
-import top.vulpine.catalog.command.flow.Chat;
-import top.vulpine.catalog.command.flow.Confirmations;
-import top.vulpine.catalog.command.flow.Lookup;
-import top.vulpine.catalog.command.flow.Redraw;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.screen.RemovePage;
 import top.vulpine.catalog.command.screen.widget.Format;
+import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Confirmations;
+import top.vulpine.catalog.command.service.Lookup;
+import top.vulpine.catalog.command.service.Redraw;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
@@ -24,7 +24,7 @@ import top.vulpine.catalog.trash.TrashBin;
 
 import java.util.List;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * Removing, untracking and tracking plugins.

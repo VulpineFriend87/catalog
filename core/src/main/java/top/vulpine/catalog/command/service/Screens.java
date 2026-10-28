@@ -1,4 +1,4 @@
-package top.vulpine.catalog.command.flow;
+package top.vulpine.catalog.command.service;
 
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.command.argument.ListFilter;
@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static top.vulpine.catalog.command.flow.Chat.send;
+import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
  * Builds a screen from the catalog and sends it.
@@ -123,7 +123,7 @@ public final class Screens {
     public void showTrash(Viewer viewer, int page) {
         confirmations.abandon(viewer);
         send(viewer, TrashPage.trash(catalog.trashed(),
-                catalog.getConfiguration().get().trashRetentionDays(), page));
+                catalog.getConfiguration().get().trash.retentionDays, page));
     }
 
     /**
