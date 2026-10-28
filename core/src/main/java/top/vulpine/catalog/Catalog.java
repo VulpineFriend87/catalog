@@ -12,6 +12,7 @@ import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.ModrinthClient;
 import top.vulpine.catalog.modrinth.Projects;
+import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
@@ -280,6 +281,24 @@ public final class Catalog {
 
     public DependencyResolver.Resolution dependenciesOf(ModrinthVersion version) {
         return projects.dependenciesOf(version);
+    }
+
+    /**
+     * Blocks on Modrinth, so it must be called off the main thread.
+     *
+     * @return the projects a build declares of one type, named
+     */
+    public List<DependencyResolver.Requirement> declared(ModrinthVersion version, DependencyType type) {
+        return projects.declared(version, type);
+    }
+
+    /**
+     * Blocks on Modrinth, so it must be called off the main thread.
+     *
+     * @return the requirements under their projects' titles and slugs
+     */
+    public List<DependencyResolver.Requirement> named(List<DependencyResolver.Requirement> requirements) {
+        return projects.named(requirements);
     }
 
     /**

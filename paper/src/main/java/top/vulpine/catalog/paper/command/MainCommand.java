@@ -21,7 +21,6 @@ import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.modrinth.Projects;
-import top.vulpine.catalog.modrinth.model.Dependency;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
@@ -35,7 +34,6 @@ import top.vulpine.catalog.paper.command.annotation.RequiresPermission;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.TrashBin;
 import top.vulpine.catalog.trash.model.TrashEntry;
-import top.vulpine.catalog.update.UpdateChecker;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
 import java.time.Duration;
@@ -887,11 +885,9 @@ public final class MainCommand {
 
             List<DependencyResolver.Requirement> declared = new ArrayList<>(resolution.required());
             declared.addAll(resolution.optional());
+            declared.addAll(resolution.conflicts());
 
-            List<DependencyView> rows = views(declared);
-            rows.addAll(conflicts(resolution.conflicts()));
-
-            send(sender, Messages.dependencies(project, version, rows, from));
+            send(sender, Messages.dependencies(project, version, catalog.named(declared), from));
 
         } catch (Exception e) {
             send(sender, Messages.failed(rootMessage(e)));
@@ -910,8 +906,8 @@ public final class MainCommand {
                             DependencyResolver.Resolution resolution, String data, String here,
                             String command) {
 
-        List<DependencyView> needs = views(resolution.missing());
-        needs.addAll(conflicts(resolution.conflicts()));
+        List<DependencyResolver.Requirement> needs = new ArrayList<>(resolution.missing());
+        needs.addAll(resolution.conflicts());
 
         Press asked = Press.of(data);
 
@@ -926,56 +922,7 @@ public final class MainCommand {
                 ? installed.stagedVersionNumber() : null;
 
         send(sender, Messages.change(change, project.title(), project.slug(), from, replaces, version,
-                notFor, needs, asked, Trail.within(here, asked == null ? null : asked.screen()), command));
-    }
-
-    /**
-     * Rows for projects the author marked as incompatible.
-     */
-    private List<DependencyView> conflicts(List<String> projectIds) {
-
-        Map<String, ModrinthProject> projects = byId(new LinkedHashSet<>(projectIds));
-        List<DependencyView> rows = new ArrayList<>();
-
-        for (String id : projectIds) {
-
-            ModrinthProject project = projects.get(id);
-
-            rows.add(new DependencyView(project != null ? project.title() : id,
-                    project != null ? project.slug() : id, null, true,
-                    DependencyType.INCOMPATIBLE, false));
-        }
-
-        return rows;
-    }
-
-    /**
-     * Turns resolved requirements into rows.
-     */
-    private List<DependencyView> views(List<DependencyResolver.Requirement> requirements) {
-
-        Map<String, ModrinthProject> projects = projectsFor(requirements);
-        List<DependencyView> views = new ArrayList<>();
-
-        for (DependencyResolver.Requirement requirement : requirements) {
-
-            ModrinthProject project = projects.get(requirement.projectId());
-            TrackedPlugin installed = catalog.getTracking().byProjectId(requirement.projectId());
-
-            String version = installed != null ? installed.versionNumber()
-                    : requirement.available() == null ? null
-                            : requirement.available().versionNumber();
-
-            views.add(new DependencyView(
-                    project != null ? project.title() : requirement.projectId(),
-                    project != null ? project.slug() : requirement.projectId(),
-                    version,
-                    requirement.installed(),
-                    requirement.type(),
-                    requirement.available() != null));
-        }
-
-        return views;
+                notFor, catalog.named(needs), asked, Trail.within(here, asked == null ? null : asked.screen()), command));
     }
 
     /**
@@ -1458,27 +1405,13 @@ public final class MainCommand {
             List<ModrinthVersion> compatible = compatibleOrEmpty(project.id());
             ModrinthVersion latest = newestOn(compatible, channel);
 
-            ProjectView.ProjectViewBuilder view = ProjectView.builder()
-                    .project(project)
-                    .author(author(project.id()))
-                    .latest(latest)
-                    .installTarget(Projects.installTarget(compatible))
-                    .installed(tracked)
-                    .untracked(tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null)
-                    .self(catalog.isSelf(tracked))
-                    .updateAvailable(isNewer(latest, tracked))
-                    .platformLoaders(catalog.platformLoaders())
-                    .gameVersions(catalog.gameVersions());
-
-            for (ProjectView.Requirement requirement : requirements(latest)) {
-                view.requirement(requirement);
-            }
-
-            for (ProjectView.Requirement optional : optionals(latest)) {
-                view.optional(optional);
-            }
-
-            send(sender, Messages.project(view.build()));
+            send(sender, Messages.project(project, author(project.id()), latest,
+                    Projects.installTarget(compatible), tracked,
+                    tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null,
+                    catalog.isSelf(tracked),
+                    catalog.declared(latest, DependencyType.REQUIRED),
+                    catalog.declared(latest, DependencyType.OPTIONAL),
+                    catalog.platformLoaders(), catalog.gameVersions()));
 
         } catch (Exception e) {
             send(sender, Messages.unreachable(rootMessage(e)));
@@ -1530,52 +1463,6 @@ public final class MainCommand {
 
         catalog.refreshUpdates();
         return catalog.updatesByProject().get(tracked.projectId());
-    }
-
-    private List<ProjectView.Requirement> requirements(ModrinthVersion version) {
-        return declared(version, DependencyType.REQUIRED);
-    }
-
-    private List<ProjectView.Requirement> optionals(ModrinthVersion version) {
-        return declared(version, DependencyType.OPTIONAL);
-    }
-
-    private List<ProjectView.Requirement> declared(ModrinthVersion version, DependencyType type) {
-
-        if (version == null) {
-            return List.of();
-        }
-
-        Set<String> ids = new LinkedHashSet<>();
-
-        for (Dependency dependency : version.dependenciesOf(type)) {
-            if (dependency.projectId() != null) {
-                ids.add(dependency.projectId());
-            }
-        }
-
-        if (ids.isEmpty()) {
-            return List.of();
-        }
-
-        List<ProjectView.Requirement> requirements = new ArrayList<>();
-        Set<String> installed = trackedProjectIds();
-
-        try {
-
-            for (ModrinthProject required : catalog.getModrinth().projects(ids).join()) {
-                requirements.add(new ProjectView.Requirement(required.title(),
-                        installed.contains(required.id())));
-            }
-
-        } catch (Exception e) {
-
-            for (String id : ids) {
-                requirements.add(new ProjectView.Requirement(id, installed.contains(id)));
-            }
-        }
-
-        return requirements;
     }
 
     private ModrinthProject firstSearchHit(String query) {
@@ -1634,15 +1521,6 @@ public final class MainCommand {
     /**
      * Whether a build is newer than what is installed.
      */
-    private static boolean isNewer(ModrinthVersion latest, TrackedPlugin tracked) {
-
-        if (latest == null || tracked == null || tracked.pinnedVersionId() != null) {
-            return false;
-        }
-
-        return UpdateChecker.isNewer(tracked, latest);
-    }
-
     private Set<String> trackedProjectIds() {
 
         Set<String> ids = new HashSet<>();

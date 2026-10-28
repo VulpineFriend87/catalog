@@ -212,7 +212,8 @@ class DependencyResolverTest {
         assertEquals(List.of(), resolver().resolve(root).conflicts());
 
         installed.add("enemy");
-        assertEquals(List.of("enemy"), resolver().resolve(root).conflicts());
+        assertEquals(List.of("enemy"), resolver().resolve(root).conflicts().stream()
+                .map(DependencyResolver.Requirement::projectId).toList());
     }
 
     @Test

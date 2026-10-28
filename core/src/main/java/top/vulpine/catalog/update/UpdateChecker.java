@@ -151,6 +151,16 @@ public final class UpdateChecker {
     }
 
     /**
+     * Whether a build is offered to a plugin as an update.
+     *
+     * @return false when either is missing or the plugin is held
+     */
+    public static boolean offers(TrackedPlugin plugin, ModrinthVersion version) {
+        return plugin != null && version != null && plugin.pinnedVersionId() == null
+                && isNewer(plugin, version);
+    }
+
+    /**
      * Whether a version Modrinth offered is newer than the installed build and the staged one.
      */
     public static boolean isNewer(TrackedPlugin plugin, ModrinthVersion version) {

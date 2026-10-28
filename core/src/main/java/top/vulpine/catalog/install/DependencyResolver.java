@@ -83,14 +83,15 @@ public final class DependencyResolver {
                     have, DependencyType.OPTIONAL));
         }
 
-        List<String> conflicts = new ArrayList<>();
+        List<Requirement> conflicts = new ArrayList<>();
+        Set<String> clashing = new LinkedHashSet<>();
 
         for (Dependency dependency : root.dependenciesOf(DependencyType.INCOMPATIBLE)) {
 
             String projectId = dependency.projectId();
 
-            if (projectId != null && installed.test(projectId) && !conflicts.contains(projectId)) {
-                conflicts.add(projectId);
+            if (projectId != null && installed.test(projectId) && clashing.add(projectId)) {
+                conflicts.add(new Requirement(projectId, null, true, DependencyType.INCOMPATIBLE));
             }
         }
 
@@ -139,13 +140,29 @@ public final class DependencyResolver {
      * One project a build named, and what this server has to say about it.
      *
      * @param projectId the project Modrinth was pointed at
+     * @param name      the project's title, or its id until it is named
+     * @param slug      the project's slug, or its id until it is named
+     * @param version   the build installed here, or the one that would be installed, or null
      * @param available the build that would be installed, null when it is already here or when
      *                  nothing published runs on this server
      * @param installed whether it is already tracked
      * @param type      what the author called it
      */
-    public record Requirement(String projectId, ModrinthVersion available, boolean installed,
-                              DependencyType type) {
+    public record Requirement(String projectId, String name, String slug, String version,
+                              ModrinthVersion available, boolean installed, DependencyType type) {
+
+        public Requirement(String projectId, ModrinthVersion available, boolean installed,
+                           DependencyType type) {
+            this(projectId, projectId, projectId, available == null ? null : available.versionNumber(),
+                    available, installed, type);
+        }
+
+        /**
+         * @return this requirement under the project's title and slug
+         */
+        public Requirement named(String name, String slug, String version) {
+            return new Requirement(projectId, name, slug, version, available, installed, type);
+        }
 
         /** Whether this has to be installed before the plugin that named it will run. */
         public boolean blocking() {
@@ -155,6 +172,16 @@ public final class DependencyResolver {
         /** Whether it is wanted but nothing published for this server can satisfy it. */
         public boolean unavailable() {
             return !installed && available == null;
+        }
+
+        /** Whether it is here and the author said it must not be. */
+        public boolean conflicting() {
+            return type == DependencyType.INCOMPATIBLE && installed;
+        }
+
+        /** Whether something could be installed for it right now. */
+        public boolean offerable() {
+            return !installed && available != null;
         }
 
     }
@@ -167,7 +194,7 @@ public final class DependencyResolver {
      * @param conflicts projects declared incompatible that are installed anyway
      */
     public record Resolution(List<Requirement> required, List<Requirement> optional,
-                             List<String> conflicts) {
+                             List<Requirement> conflicts) {
 
         /** The required projects that are not here yet, in the order they were found. */
         public List<Requirement> missing() {

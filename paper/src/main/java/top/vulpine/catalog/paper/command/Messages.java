@@ -11,6 +11,7 @@ import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.paper.EnableCheck;
 import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
@@ -20,6 +21,7 @@ import top.vulpine.catalog.modrinth.model.SearchHit;
 import top.vulpine.catalog.modrinth.model.SearchResults;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.trash.model.TrashEntry;
+import top.vulpine.catalog.update.UpdateChecker;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
 import java.time.Duration;
@@ -571,17 +573,31 @@ public final class Messages {
 
     // --- /catalog info ----------------------------------------------------------------------
 
-    public static List<Component> project(ProjectView view) {
+    /**
+     * @param author        who to credit, or null when the team could not be fetched
+     * @param latest        the newest build on the channel being followed, or null
+     * @param installTarget what the install button fetches, or null when nothing runs here
+     * @param installed     the plugin as tracked, or null when it is not installed
+     * @param untracked     the project's jar when it is in the plugins folder but untracked
+     * @param self          whether this is Catalog's own page
+     * @param loaders       the loaders this server can use
+     */
+    public static List<Component> project(ModrinthProject project, String author, ModrinthVersion latest,
+                                          ModrinthVersion installTarget, TrackedPlugin installed,
+                                          InstalledJar untracked, boolean self,
+                                          List<DependencyResolver.Requirement> requirements,
+                                          List<DependencyResolver.Requirement> optionals,
+                                          List<String> loaders, GameVersions names) {
 
-        ModrinthProject project = view.project();
-        TrackedPlugin installed = view.installed();
+        ModrinthVersion offered = latest != null ? latest : installTarget;
+        boolean declares = !requirements.isEmpty() || !optionals.isEmpty();
 
         List<Component> out = new ArrayList<>();
 
         out.add(line()
                 .append(Component.text(project.title(), BRAND).decorate(TextDecoration.BOLD))
-                .append(status(view))
-                .hoverEvent(HoverEvent.showText(identity(view)))
+                .append(status(installed, untracked, UpdateChecker.offers(installed, latest)))
+                .hoverEvent(HoverEvent.showText(identity(project, installed, offered)))
                 .build());
 
         if (project.description() != null && !project.description().isBlank()) {
@@ -592,7 +608,7 @@ public final class Messages {
 
         out.add(line()
                 .append(Component.text(INDENT))
-                .append(author(view))
+                .append(author(author))
                 .append(Component.text(compact(project.downloads()), BRAND))
                 .append(Component.text(" downloads", MUTED))
                 .append(Component.text(" · ", MUTED))
@@ -600,54 +616,59 @@ public final class Messages {
                 .append(Component.text(" followers", MUTED))
                 .build());
 
-        out.add(field("Minecraft", minecraft(view)));
+        out.add(field("Minecraft", minecraft(project, offered, loaders, names)));
 
         if (project.categories() != null && !project.categories().isEmpty()) {
             out.add(field("Tags", Component.text(String.join(", ", project.categories()), MUTED)));
         }
 
-        if (!view.requirements().isEmpty()) {
-            out.add(field("Needs", requirements(view.requirements())));
+        if (!requirements.isEmpty()) {
+            out.add(field("Needs", requirements(requirements)));
         }
 
-        if (!view.optionals().isEmpty()) {
-            out.add(field("Optional", requirements(view.optionals())));
+        if (!optionals.isEmpty()) {
+            out.add(field("Optional", requirements(optionals)));
         }
 
         out.add(Component.empty());
-        out.add(actions(view, installed));
+
+        if (installed == null && untracked != null) {
+            out.add(untrackedActions(project, untracked, offered, declares));
+        } else if (installed == null) {
+            out.add(installActions(project, installTarget, offered, declares));
+        } else {
+            out.add(installedActions(project, installed, latest, offered, declares, self));
+        }
 
         return out;
     }
 
-    private static Component status(ProjectView view) {
+    private static Component status(TrackedPlugin installed, InstalledJar untracked, boolean updateAvailable) {
 
-        if (view.installed() == null) {
-            return Component.text(view.untracked() != null ? "  untracked" : "  not installed", MUTED);
+        if (installed == null) {
+            return Component.text(untracked != null ? "  untracked" : "  not installed", MUTED);
         }
 
-        if (view.installed().pendingRestart()) {
+        if (installed.pendingRestart()) {
             return Component.text("  update downloaded", PENDING);
         }
 
-        if (view.installed().pendingLoad()) {
+        if (installed.pendingLoad()) {
             return Component.text("  loads on restart", PENDING);
         }
 
-        if (view.updateAvailable()) {
+        if (updateAvailable) {
             return Component.text("  update available", BRAND);
         }
 
-        if (view.installed().isPinned()) {
+        if (installed.isPinned()) {
             return Component.text("  held", MUTED);
         }
 
         return Component.text("  installed", DONE);
     }
 
-    private static Component identity(ProjectView view) {
-
-        ModrinthProject project = view.project();
+    private static Component identity(ModrinthProject project, TrackedPlugin installed, ModrinthVersion offered) {
 
         TextComponent.Builder hover = Component.text()
                 .append(Component.text(project.title(), TEXT))
@@ -661,9 +682,7 @@ public final class Messages {
                             ? project.license().id() : project.license().name(), TEXT));
         }
 
-        if (view.installed() != null) {
-
-            TrackedPlugin installed = view.installed();
+        if (installed != null) {
 
             hover.append(Component.newline())
                     .append(Component.newline())
@@ -682,45 +701,38 @@ public final class Messages {
             }
         }
 
-        ModrinthVersion newest = offered(view);
-
-        if (newest != null) {
+        if (offered != null) {
             // Not the project's newest build: the newest one that runs here, on the channel being
             // followed. Saying "latest" invited exactly the wrong reading.
             hover.append(Component.newline())
                     .append(Component.newline())
                     .append(Component.text("newest here  ", MUTED))
-                    .append(Component.text(newest.versionNumber(), TEXT))
-                    .append(Component.text(newest.versionType() == null ? ""
-                            : "  " + newest.versionType().apiName(), MUTED))
+                    .append(Component.text(offered.versionNumber(), TEXT))
+                    .append(Component.text(offered.versionType() == null ? ""
+                            : "  " + offered.versionType().apiName(), MUTED))
                     .append(Component.newline())
                     .append(Component.text("published  ", MUTED))
-                    .append(Component.text(ago(newest.datePublished()), TEXT));
+                    .append(Component.text(ago(offered.datePublished()), TEXT));
         }
 
         return hover.build();
     }
 
     /**
-     * The build this page describes, as the argument that names it.
+     * The build a page describes, as the argument that names it.
      */
-    private static String described(ProjectView view) {
-        ModrinthVersion offered = offered(view);
+    private static String described(ModrinthVersion offered) {
         return offered == null ? "" : " " + offered.id();
     }
 
-    private static ModrinthVersion offered(ProjectView view) {
-        return view.latest() != null ? view.latest() : view.installTarget();
-    }
+    private static Component author(String author) {
 
-    private static Component author(ProjectView view) {
-
-        if (view.author() == null || view.author().isBlank()) {
+        if (author == null || author.isBlank()) {
             return Component.empty();
         }
 
         return Component.text("by ", MUTED)
-                .append(Component.text(view.author(), TEXT))
+                .append(Component.text(author, TEXT))
                 .append(Component.text(" · ", MUTED));
     }
 
@@ -728,20 +740,22 @@ public final class Messages {
      * The versions of the build this page offers, or the whole project's in grey when no build runs
      * here. The hover lists the loaders.
      */
-    private static Component minecraft(ProjectView view) {
+    private static Component minecraft(ModrinthProject project, ModrinthVersion offered, List<String> loaders,
+                                       GameVersions names) {
 
-        ModrinthVersion offered = offered(view);
-
-        String versions = view.gameVersions().describe(offered != null
-                ? offered.gameVersions() : view.project().gameVersions());
+        String versions = names.describe(offered != null ? offered.gameVersions() : project.gameVersions());
 
         return Component.text(versions, offered != null ? TEXT : MUTED)
-                .hoverEvent(HoverEvent.showText(Component.text("Loaders  ", MUTED).append(loaders(view))));
+                .hoverEvent(HoverEvent.showText(Component.text("Loaders  ", MUTED)
+                        .append(loaders(project, loaders))));
     }
 
-    private static Component loaders(ProjectView view) {
+    /**
+     * @param here the loaders this server can use, shown brighter
+     */
+    private static Component loaders(ModrinthProject project, List<String> here) {
 
-        List<String> declared = view.project().loaders();
+        List<String> declared = project.loaders();
 
         if (declared == null || declared.isEmpty()) {
             return Component.text("unknown", MUTED);
@@ -756,19 +770,19 @@ public final class Messages {
                 out.append(Component.text(", ", MUTED));
             }
 
-            out.append(Component.text(loader, view.platformLoaders().contains(loader) ? TEXT : MUTED));
+            out.append(Component.text(loader, here.contains(loader) ? TEXT : MUTED));
             first = false;
         }
 
         return out.build();
     }
 
-    private static Component requirements(List<ProjectView.Requirement> requirements) {
+    private static Component requirements(List<DependencyResolver.Requirement> requirements) {
 
         TextComponent.Builder out = Component.text();
         boolean first = true;
 
-        for (ProjectView.Requirement requirement : requirements) {
+        for (DependencyResolver.Requirement requirement : requirements) {
 
             if (!first) {
                 out.append(Component.text(", ", MUTED));
@@ -785,66 +799,77 @@ public final class Messages {
         return out.build();
     }
 
-    private static Component actions(ProjectView view, TrackedPlugin installed) {
+    private static Component untrackedActions(ModrinthProject project, InstalledJar untracked,
+                                              ModrinthVersion offered, boolean declares) {
 
-        String key = view.project().slug();
+        String key = project.slug();
         String here = ClickContext.INFO + key;
 
         List<Component> row = new ArrayList<>();
 
-        if (installed == null && view.untracked() != null) {
+        row.add(button("Track", from("/catalog track " + quoted(untracked.fileName()), here),
+                BRAND, "Track " + project.title()));
 
-            row.add(button("Track", from("/catalog track " + quoted(view.untracked().fileName()), here),
-                    BRAND, "Track " + view.project().title()));
+        row.add(button("Versions", from("/catalog versions " + key, here), MUTED,
+                "The newest release, beta and alpha for this server"));
 
-            row.add(button("Versions", from("/catalog versions " + key, here), MUTED,
-                    "The newest release, beta and alpha for this server"));
-
-            if (view.declaresAnything()) {
-                row.add(button("Dependencies", from("/catalog dependencies " + key + described(view), here),
-                        MUTED, "Show dependencies"));
-            }
-
-            return buttons(row);
+        if (declares) {
+            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here),
+                    MUTED, "Show dependencies"));
         }
 
-        if (installed == null) {
+        return buttons(row);
+    }
 
-            ModrinthVersion target = view.installTarget();
+    private static Component installActions(ModrinthProject project, ModrinthVersion installTarget,
+                                            ModrinthVersion offered, boolean declares) {
 
-            if (target == null) {
-                return line().append(Component.text(INDENT))
-                        .append(Component.text("No build for this server", MUTED))
-                        .build();
-            }
-
-            row.add(button("Install", from("/catalog install " + key, here), BRAND,
-                    "Install " + target.versionNumber()));
-
-            String versions = from("/catalog versions " + key, here);
-
-            row.add(Permitted.unless("/catalog install " + key,
-                    button("Versions", versions, MUTED,
-                            "Choose a build: the newest release, beta and alpha for this server"),
-                    button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
-
-            if (view.declaresAnything()) {
-                row.add(button("Dependencies", from("/catalog dependencies " + key + described(view), here), MUTED,
-                        "Show dependencies"));
-            }
-
-            return buttons(row);
+        if (installTarget == null) {
+            return line().append(Component.text(INDENT))
+                    .append(Component.text("No build for this server", MUTED))
+                    .build();
         }
+
+        String key = project.slug();
+        String here = ClickContext.INFO + key;
+
+        List<Component> row = new ArrayList<>();
+
+        row.add(button("Install", from("/catalog install " + key, here), BRAND,
+                "Install " + installTarget.versionNumber()));
+
+        String versions = from("/catalog versions " + key, here);
+
+        row.add(Permitted.unless("/catalog install " + key,
+                button("Versions", versions, MUTED,
+                        "Choose a build: the newest release, beta and alpha for this server"),
+                button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
+
+        if (declares) {
+            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here), MUTED,
+                    "Show dependencies"));
+        }
+
+        return buttons(row);
+    }
+
+    private static Component installedActions(ModrinthProject project, TrackedPlugin installed,
+                                              ModrinthVersion latest, ModrinthVersion offered,
+                                              boolean declares, boolean self) {
+
+        String key = project.slug();
+        String here = ClickContext.INFO + key;
+
+        List<Component> row = new ArrayList<>();
 
         if (installed.pendingRestart()) {
             row.add(button("Cancel update", from("/catalog cancel " + key, here), PENDING,
                     "Leave " + installed.versionNumber() + " in place"));
         }
 
-        if (view.updateAvailable() && !installed.pendingLoad()) {
+        if (UpdateChecker.offers(installed, latest) && !installed.pendingLoad()) {
             row.add(button("Update", from("/catalog update " + key, here), BRAND,
-                    "Download " + (view.latest() == null ? "the new build" : view.latest().versionNumber())
-                            + " for the next restart" + replaces(installed)));
+                    "Download " + latest.versionNumber() + " for the next restart" + replaces(installed)));
         }
 
         String versions = from("/catalog versions " + key, here);
@@ -853,15 +878,15 @@ public final class Messages {
                 button("Switch", versions, MUTED, "Choose a different version"),
                 button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
 
-        if (view.declaresAnything()) {
-            row.add(button("Dependencies", from("/catalog dependencies " + key + described(view), here), MUTED,
+        if (declares) {
+            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here), MUTED,
                     "Show dependencies"));
         }
 
         row.add(button("Settings", from("/catalog settings " + key, here), MUTED,
                 "Open the settings page"));
 
-        row.add(view.self()
+        row.add(self
                 ? Component.empty()
                 : button("Remove", from("/catalog uninstall " + key, here), DANGER,
                         "Move to the trash"));
@@ -1319,7 +1344,7 @@ public final class Messages {
     // --- /catalog dependencies -----------------------------------------------------------------------
 
     public static List<Component> dependencies(ModrinthProject project, ModrinthVersion version,
-                                               List<DependencyView> rows, String from) {
+                                               List<DependencyResolver.Requirement> rows, String from) {
 
         String key = project.slug();
         String here = Trail.within(ClickContext.dependencies(key, version.id()), from);
@@ -1334,7 +1359,7 @@ public final class Messages {
 
         int missing = 0;
 
-        for (DependencyView row : rows) {
+        for (DependencyResolver.Requirement row : rows) {
             if (row.blocking()) {
                 missing++;
             }
@@ -1354,7 +1379,7 @@ public final class Messages {
             out.add(Component.text(INDENT + "Declares none", MUTED));
         }
 
-        for (DependencyView row : rows) {
+        for (DependencyResolver.Requirement row : rows) {
             out.add(dependencyRow(row, here));
         }
 
@@ -1367,7 +1392,7 @@ public final class Messages {
         return out;
     }
 
-    private static Component dependencyRow(DependencyView row, String here) {
+    private static Component dependencyRow(DependencyResolver.Requirement row, String here) {
 
         TextComponent.Builder line = line().append(Component.text(INDENT));
 
@@ -1396,7 +1421,7 @@ public final class Messages {
                 .append(Component.text(kind, MUTED))
                 .append(Component.space());
 
-        if (!row.available()) {
+        if (row.available() == null) {
             return line.append(Component.text(" no build for this server", DANGER)).build();
         }
 
@@ -1920,7 +1945,7 @@ public final class Messages {
      */
     public static List<Component> change(Change change, String name, String slug, String from,
                                          String replaces, ModrinthVersion version, String notFor,
-                                         List<DependencyView> needs, Press asked, String here,
+                                         List<DependencyResolver.Requirement> needs, Press asked, String here,
                                          String command) {
 
         List<Component> out = new ArrayList<>();
@@ -1957,10 +1982,10 @@ public final class Messages {
         int missing = 0;
         boolean reachable = true;
 
-        for (DependencyView row : needs) {
+        for (DependencyResolver.Requirement row : needs) {
             if (row.blocking()) {
                 missing++;
-                reachable &= row.available();
+                reachable &= row.available() != null;
             }
         }
 
@@ -1968,7 +1993,7 @@ public final class Messages {
 
             out.add(Component.empty());
 
-            for (DependencyView row : needs) {
+            for (DependencyResolver.Requirement row : needs) {
                 out.add(dependencyRow(row, here));
             }
         }

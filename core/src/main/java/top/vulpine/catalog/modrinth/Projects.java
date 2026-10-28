@@ -3,17 +3,24 @@ package top.vulpine.catalog.modrinth;
 import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.install.InstallException;
+import top.vulpine.catalog.modrinth.model.Dependency;
+import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.modrinth.model.SearchResults;
 import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.TrackingStore;
+import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.ServerTarget;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Asking Modrinth about projects, narrowed to what this server can run.
@@ -162,6 +169,76 @@ public final class Projects {
                 projectId -> tracking.byProjectId(projectId) != null);
 
         return resolver.resolve(version);
+    }
+
+    /**
+     * What a build declares of one type, named and checked against what is installed.
+     *
+     * @param version the build, or null for none
+     * @return the declared projects, without looking for builds to install
+     */
+    public List<DependencyResolver.Requirement> declared(ModrinthVersion version, DependencyType type) {
+
+        if (version == null) {
+            return List.of();
+        }
+
+        List<DependencyResolver.Requirement> declared = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        for (Dependency dependency : version.dependenciesOf(type)) {
+
+            String projectId = dependency.projectId();
+
+            if (projectId != null && seen.add(projectId)) {
+                declared.add(new DependencyResolver.Requirement(projectId, null,
+                        tracking.byProjectId(projectId) != null, type));
+            }
+        }
+
+        return named(declared);
+    }
+
+    /**
+     * Puts the project's title and slug, and the installed build, on each requirement.
+     *
+     * @return the requirements in the same order, left under their ids when Modrinth cannot be reached
+     */
+    public List<DependencyResolver.Requirement> named(List<DependencyResolver.Requirement> requirements) {
+
+        if (requirements.isEmpty()) {
+            return requirements;
+        }
+
+        Map<String, ModrinthProject> projects = new HashMap<>();
+        Set<String> ids = new LinkedHashSet<>();
+
+        for (DependencyResolver.Requirement requirement : requirements) {
+            ids.add(requirement.projectId());
+        }
+
+        try {
+            for (ModrinthProject project : modrinth.projects(ids).join()) {
+                projects.put(project.id(), project);
+            }
+        } catch (Exception ignored) {
+            // The ids are still enough to name and act on a row.
+        }
+
+        List<DependencyResolver.Requirement> named = new ArrayList<>();
+
+        for (DependencyResolver.Requirement requirement : requirements) {
+
+            ModrinthProject project = projects.get(requirement.projectId());
+            TrackedPlugin installed = tracking.byProjectId(requirement.projectId());
+
+            named.add(requirement.named(
+                    project != null ? project.title() : requirement.projectId(),
+                    project != null ? project.slug() : requirement.projectId(),
+                    installed != null ? installed.versionNumber() : requirement.version()));
+        }
+
+        return named;
     }
 
 }
