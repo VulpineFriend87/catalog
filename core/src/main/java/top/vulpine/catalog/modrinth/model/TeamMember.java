@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * One person on a project's team.
  *
- * <p>Modrinth keeps authorship on the team rather than on the project, so a project alone cannot
- * say who made it — the members have to be asked for separately.</p>
+ * <p>Modrinth keeps authorship on the team. The members are fetched separately from the
+ * project.</p>
  */
 @Getter
 @Accessors(fluent = true)
@@ -22,7 +22,7 @@ public final class TeamMember {
     private int ordering;
 
     /**
-     * The name to show, preferring the display name the person chose over their handle.
+     * The display name the person chose, or their handle.
      *
      * @return the name, or null if this member has no user attached
      */
@@ -36,12 +36,11 @@ public final class TeamMember {
     }
 
     /**
-     * Picks the one member worth putting on a page.
+     * The member to credit on a page.
      *
-     * <p>The owner if there is one, otherwise whoever the team lists first. Modrinth's own ordering
-     * is the closest thing to an author credit that exists.</p>
+     * <p>The owner if there is one. Otherwise whoever the team lists first.</p>
      *
-     * @param members the team, as returned by the API
+     * @param members the team the API returned
      * @return the name to credit, or null if the team is empty
      */
     public static String credit(List<TeamMember> members) {

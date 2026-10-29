@@ -4,7 +4,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.command.screen.Notice;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
@@ -17,7 +16,7 @@ import static top.vulpine.catalog.command.screen.widget.Palette.*;
 import static top.vulpine.catalog.command.screen.widget.Widgets.*;
 
 /**
- * The summary staff see when they join.
+ * The join notice.
  */
 public final class JoinNotice {
 
@@ -31,7 +30,7 @@ public final class JoinNotice {
     }
 
     /**
-     * One row per fact, most urgent first, then the buttons that act on them.
+     * One row per fact in order of urgency. The buttons come last.
      *
      * @param updatable whether there is anything Update all would download
      */
@@ -40,7 +39,7 @@ public final class JoinNotice {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Catalog", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Catalog", BRAND))
                 .append(Component.text("  updates", MUTED))
                 .build());
 
@@ -166,8 +165,8 @@ public final class JoinNotice {
     }
 
     /**
-     * The button that switches a plugin back to the build its last update replaced, grey and inert
-     * when that build is gone from Modrinth.
+     * The button that switches a plugin back to the build its last update replaced. It is grey and
+     * does nothing when that build is gone from Modrinth.
      */
     public static Component rollbackIcon(String command, String to, boolean gone) {
 

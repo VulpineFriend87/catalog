@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Walks the plugins folder and turns it into a list of hashed, inspected jars.
+ * Hashes and inspects every jar in the plugins folder.
  */
 public final class JarScanner {
 
@@ -28,7 +28,7 @@ public final class JarScanner {
     }
 
     /**
-     * Scans the folder from scratch, hashing every jar.
+     * Scans the folder and hashes every jar.
      *
      * @return what was found
      */
@@ -37,9 +37,9 @@ public final class JarScanner {
     }
 
     /**
-     * Scans the folder, reusing hashes for files that have not changed.
+     * Scans the folder and reuses the hashes of unchanged files.
      *
-     * @param previous the result of an earlier scan, may be empty
+     * @param previous the result of an earlier scan, or an empty one
      * @return what was found
      */
     public ScanResult scan(List<InstalledJar> previous) {
@@ -77,7 +77,7 @@ public final class JarScanner {
             try {
                 hash = Hashing.sha512(file);
             } catch (IOException e) {
-                // A jar that cannot be read is reported: on Windows this is usually a lock
+                // Reported. On Windows this is usually a lock.
                 unreadable.add(new InstalledJar(file, size, lastModified, null, PluginDescriptor.unknown()));
                 continue;
             }

@@ -21,7 +21,7 @@ import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * Downloading and cancelling updates.
+ * {@code /catalog update} and {@code cancel}.
  */
 public final class UpdateCommand implements OrphanCommand {
 

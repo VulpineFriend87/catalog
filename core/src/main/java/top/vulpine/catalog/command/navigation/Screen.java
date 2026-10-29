@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 
 /**
- * A screen a button can be pressed on, and reopened from its token.
+ * A screen a button can be pressed on and reopened from.
  */
 public sealed interface Screen {
 
@@ -83,7 +83,7 @@ public sealed interface Screen {
     }
 
     /**
-     * Every managed plugin, narrowed by filters.
+     * The plugin list with its filters.
      */
     record ListScreen(Set<ListFilter> filters) implements Screen {
 

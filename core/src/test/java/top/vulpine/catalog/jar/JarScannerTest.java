@@ -46,7 +46,7 @@ class JarScannerTest {
         TestJars.builder(plugins, "real.jar").descriptor("plugin.yml", "name: Real\n").build();
         Files.writeString(plugins.resolve("config.yml"), "not a plugin");
 
-        // Both of these are Catalog's own territory and must never be hashed as plugins.
+        // Catalog's own folders. Never hashed as plugins.
         Files.createDirectories(plugins.resolve("Catalog"));
         TestJars.builder(plugins.resolve("update"), "queued.jar").descriptor("plugin.yml", "name: Real\n").build();
 

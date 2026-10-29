@@ -2,7 +2,6 @@ package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.navigation.Trail;
 import top.vulpine.catalog.command.permission.Permitted;
@@ -34,7 +33,7 @@ public final class SettingsPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text(plugin.displayName(), BRAND).decorate(TextDecoration.BOLD))
+                .append(title(plugin.displayName(), BRAND))
                 .append(Component.text("  settings", MUTED))
                 .build());
 
@@ -46,20 +45,18 @@ public final class SettingsPage {
 
         out.add(Component.empty());
 
-        out.add(setting("Channel", channelChoices(plugin, key, here)));
-        out.add(setting("Auto-update", autoChoices(plugin, key, here)));
+        out.add(field("Channel", channelChoices(plugin, key, here)));
+        out.add(field("Auto-update", autoChoices(plugin, key, here)));
 
-        // Only meaningful when Catalog is the one deciding to install.
+        // Soak only applies to automatic updates.
         if (plugin.autoUpdate()) {
-            out.add(setting("Soak", soakChoices(plugin, key, defaultSoak, here)));
+            out.add(field("Soak", soakChoices(plugin, key, defaultSoak, here)));
         }
 
-        out.add(setting("Updates", holdChoices(plugin, key, here)));
+        out.add(field("Updates", holdChoices(plugin, key, here)));
 
         out.add(Component.empty());
 
-        // Said on the line rather than only in the hover, because the one thing anyone fears here
-        // is that it deletes the file.
         out.add(line()
                 .append(Component.text(INDENT))
                 .append(button("Untrack", from("/catalog untrack " + key, here), DANGER,
@@ -125,7 +122,7 @@ public final class SettingsPage {
                             : "Wait " + soakLabel(minutes) + " after a build is published", here));
         }
 
-        // A window someone typed that is not one of the presets still has to be visible.
+        // A typed window that is not a preset is shown too.
         if (custom) {
             out.append(chosen(soakLabel(plugin.soakMinutes())));
         }
@@ -157,14 +154,6 @@ public final class SettingsPage {
     /** The value a setting currently holds. */
     private static Component chosen(String label) {
         return Component.text(label, BRAND).append(Component.text("  ", MUTED));
-    }
-
-    private static Component setting(String label, Component values) {
-
-        return line()
-                .append(Component.text(INDENT + label + ":  ", MUTED))
-                .append(values)
-                .build();
     }
 
 }

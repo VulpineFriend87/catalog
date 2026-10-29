@@ -25,7 +25,7 @@ public final class Dependents {
     private final Function<Collection<String>, Map<String, ModrinthVersion>> identify;
 
     /**
-     * @param identify hashes to the build each one is, which is what carries the dependency list
+     * @param identify maps hashes to the build each one is
      */
     public Dependents(TrackingStore tracking,
                       Function<Collection<String>, Map<String, ModrinthVersion>> identify) {
@@ -37,7 +37,7 @@ public final class Dependents {
      * The installed plugins that name this one as a required dependency.
      *
      * @param plugin the plugin about to be removed
-     * @return what would be left without a dependency, empty when nothing needs it
+     * @return what would be left without a dependency, or an empty list
      */
     public List<TrackedPlugin> of(TrackedPlugin plugin) {
 
@@ -63,8 +63,7 @@ public final class Dependents {
         try {
             installed = identify.apply(hashes);
         } catch (Exception e) {
-            // Saying nothing depends on it would be worse than saying nothing at all, so the
-            // caller is told to carry on without a claim either way.
+            // Treated as nothing depending on it.
             Logger.debug(CatalogAction.TRACK, "Could not check what depends on "
                     + plugin.displayName() + ": " + Errors.rootMessage(e));
             return List.of();

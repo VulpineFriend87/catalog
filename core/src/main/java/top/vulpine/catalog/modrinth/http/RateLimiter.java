@@ -4,7 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * A sliding-window limiter that keeps Catalog inside Modrinth's published request budget.
+ * A sliding-window limiter for Modrinth's request budget.
  *
  * <p>The documented allowance is 300 requests per minute per IP.</p>
  */
@@ -23,7 +23,7 @@ public final class RateLimiter {
     }
 
     /**
-     * Waits until another request may be sent, then records it.
+     * Waits until another request may be sent and records it.
      *
      * @throws InterruptedException if the calling thread is interrupted while waiting
      */

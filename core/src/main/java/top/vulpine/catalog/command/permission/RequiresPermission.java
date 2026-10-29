@@ -11,9 +11,8 @@ import java.lang.annotation.Target;
 /**
  * Marks a command as requiring a Catalog permission node.
  *
- * <p>The value is relative to the plugin root, so {@code command.list} resolves to
- * {@code catalog.command.list} and is checked through
- * {@link top.vulpine.catalog.platform.Viewer#has}.</p>
+ * <p>The node is below {@code catalog.}: {@code command.list} is {@code catalog.command.list}.
+ * {@link top.vulpine.catalog.platform.Viewer#has} checks it.</p>
  */
 @DistributeOnMethods
 @NotSender.ImpliesNotSender
@@ -22,7 +21,7 @@ import java.lang.annotation.Target;
 public @interface RequiresPermission {
 
     /**
-     * @return the node, relative to {@code catalog}
+     * @return the node below {@code catalog.}
      */
     String value();
 

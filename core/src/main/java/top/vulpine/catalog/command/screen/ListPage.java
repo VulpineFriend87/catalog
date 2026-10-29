@@ -3,7 +3,6 @@ package top.vulpine.catalog.command.screen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.argument.ListFilter;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.Permitted;
@@ -54,7 +53,7 @@ public final class ListPage {
 
         List<InstalledJar> jars = ListFilter.keepsUntracked(filters) ? untracked : List.of();
 
-        // Every plugin is here; the order only stops the ones asking for a decision being buried.
+        // Plugins waiting for a decision come first.
         ordered.sort(Comparator
                 .comparing((TrackedPlugin plugin) -> !updates.containsKey(plugin.projectId()))
                 .thenComparing(plugin -> plugin.displayName().toLowerCase(Locale.ROOT)));
@@ -62,7 +61,7 @@ public final class ListPage {
         List<Component> out = new ArrayList<>();
 
         TextComponent.Builder header = line()
-                .append(Component.text("Catalog", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Catalog", BRAND))
                 .append(Component.text("  " + plugins.size(), TEXT))
                 .append(Component.text(" plugins", MUTED));
 
@@ -161,16 +160,14 @@ public final class ListPage {
                     "Download " + update.to() + " for the next restart" + replaces(plugin)));
         }
 
-        // No remove button on Catalog's own row: pressing it would delete the thing holding the
-        // button, and nothing in game could put it back.
+        // No remove button on Catalog's own row.
         if (!self) {
             row.append(Component.space()).append(icon("×", DANGER,
                     from("/catalog uninstall " + key(plugin), screen),
                     "Move " + plugin.displayName() + " to the trash"));
         }
 
-        // One word for both, because the only fact that matters here is that a restart is owed.
-        // Which of the two it is belongs in the hover, where it is asked for rather than imposed.
+        // One word for an update and a fresh install. The hover says which.
         if (plugin.awaitingRestart()) {
             row.append(Component.text("  restart", PENDING));
         } else if (failure != null) {
@@ -222,7 +219,7 @@ public final class ListPage {
     }
 
     /**
-     * Which kind of restart a plugin is waiting for, if any.
+     * Which kind of restart a plugin is waiting for.
      */
     private static Component waiting(TrackedPlugin plugin) {
 

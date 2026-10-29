@@ -27,7 +27,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * What is in the plugins folder, and which of it Catalog manages.
+ * The jars in the plugins folder and which of them Catalog tracks.
  *
  * <p>Blocks, so it must be called off the server main thread.</p>
  */
@@ -49,10 +49,10 @@ public final class Library {
     private volatile List<TrackedPlugin> notApplied = List.of();
     private volatile List<TrackedPlugin> loaded = List.of();
 
-    /** The untracked jars Modrinth recognised, by project id, from the last scan. */
+    /** The untracked jars Modrinth recognised in the last scan by project id. */
     private volatile Map<String, InstalledJar> untrackedByProject = Map.of();
 
-    /** The name each jar declares in its descriptor, by file name, from the last scan. */
+    /** The name each jar declares in its descriptor by file name in the last scan. */
     private volatile Map<String, String> declared = Map.of();
 
     public Library(Platform platform, ModrinthClient modrinth, TrackingStore tracking,
@@ -75,19 +75,18 @@ public final class Library {
     }
 
     /**
-     * The jars Catalog could manage but is not, as the last scan left them.
+     * The jars Catalog could manage but is not.
      *
-     * @return the untracked jars, newest scan only
+     * @return the untracked jars of the last scan
      */
     public List<InstalledJar> untracked() {
         return Collections.unmodifiableList(untracked);
     }
 
     /**
-     * Stops managing a plugin, leaving its jar where it is.
+     * Stops managing a plugin. Its jar stays where it is.
      *
-     * <p>The ignore list is what makes this last: without it the next scan would adopt the plugin
-     * straight back.</p>
+     * <p>The ignore list keeps the next scan from adopting it again.</p>
      *
      * @param plugin the plugin to untrack
      * @param by     who asked, or null for Catalog
@@ -104,10 +103,10 @@ public final class Library {
     }
 
     /**
-     * Puts a jar back under management.
+     * Tracks a jar again.
      *
-     * <p>Both the project id and the hash have to go, because either one on its own keeps the scan
-     * skipping the file. The id is not on disk, so it is asked for again.</p>
+     * <p>Both the project id and the hash are removed. Either one alone keeps the scan skipping the
+     * file. The project id is asked of Modrinth again.</p>
      *
      * @param jar the file to stop ignoring
      * @return true if it was ignored and now is not
@@ -152,7 +151,7 @@ public final class Library {
     }
 
     /**
-     * Clears the restart a fresh install is waiting for once its jar is enabled.
+     * Clears {@code pendingLoad} on a fresh install whose jar is enabled.
      */
     public void noticeLoaded() throws TrackingException {
 
@@ -180,7 +179,7 @@ public final class Library {
 
     /**
      * @param plugin a tracked plugin
-     * @return the name its jar declares, which is what the server knows it by, or null
+     * @return the name its jar declares, or null
      */
     public String declaredName(TrackedPlugin plugin) {
         return plugin.fileName() == null ? null : declared.get(plugin.fileName());
@@ -203,8 +202,8 @@ public final class Library {
     }
 
     /**
-     * @param adoptedBy who asked for this scan, credited with anything it adopts, or null for the
-     *                  scan Catalog runs on its own
+     * @param adoptedBy who is credited with anything this scan adopts, or null when Catalog runs it
+     *                  automatically
      */
     public boolean index(String adoptedBy) {
 
@@ -234,8 +233,7 @@ public final class Library {
         try {
             identified = modrinth.identify(hashes).join();
         } catch (Exception e) {
-            // Without an answer every tracked plugin would look unidentifiable, and reconciling on
-            // that would untrack the entire server over a network blip.
+            // Without an answer from Modrinth every tracked plugin would be untracked.
             Logger.warn(CatalogAction.SCAN, "Could not reach Modrinth, so nothing was reconciled: "
                     + Errors.rootMessage(e));
             return false;
@@ -247,7 +245,7 @@ public final class Library {
         ReconcileReport report = reconciler.reconcile(scan, identified);
         boolean named = nameTrackedPlugins();
 
-        // Before the save, because recording who staged a build also clears it from the record.
+        // Before the save. Recording who staged a build clears it from the record.
         record(report, adoptedBy);
 
         if (report.hasChanges() || named) {
@@ -313,7 +311,7 @@ public final class Library {
                     named(report.applied()), null));
         }
 
-        // The Reconciler clears everything else about the staging; this is the last reader.
+        // The last reader of the staging fields. The Reconciler clears the rest.
         for (TrackedPlugin plugin : report.applied()) {
             plugin.stagedBy(null);
         }
@@ -346,9 +344,9 @@ public final class Library {
     }
 
     /**
-     * Fills in the human names of tracked plugins that only have a project id.
+     * Fills in the name and slug of tracked plugins that only have a project id.
      *
-     * @return true if anything was named, so the caller knows to save
+     * @return true if anything was named
      */
     private boolean nameTrackedPlugins() {
 
@@ -379,7 +377,7 @@ public final class Library {
             return true;
 
         } catch (Exception e) {
-            // Names are cosmetic; project ids still identify everything correctly without them.
+            // Project ids still identify every plugin.
             Logger.debug(CatalogAction.TRACK, "Could not fetch project names: "
                     + Errors.rootMessage(e));
             return false;
@@ -387,7 +385,7 @@ public final class Library {
     }
 
     /**
-     * Says what the scan found, at the volume each outcome deserves.
+     * Logs what the scan found.
      */
     private void describe(ReconcileReport report, ScanResult scan, boolean startup) {
 
@@ -405,8 +403,8 @@ public final class Library {
                     : "Applied without a restart by something else: " + names(report.applied()));
         }
 
-        // Only the scan that runs at startup can say this. Later on, a staged build sitting
-        // untouched next to an unchanged jar is a restart that has not happened yet.
+        // Only the startup scan can say this. Later a staged build next to an unchanged jar is
+        // still waiting for a restart.
         if (startup) {
             for (TrackedPlugin plugin : report.notApplied()) {
                 history.add(HistoryEntry.notApplied(plugin));

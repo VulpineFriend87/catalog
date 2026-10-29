@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Putting builds where the server will load them.
+ * Installs and stages builds.
  *
  * <p>Every method blocks, so none may be called on the server main thread.</p>
  */
@@ -101,11 +101,11 @@ public final class Installer {
     }
 
     /**
-     * Drops a staged build so the next restart leaves the plugin as it is.
+     * Cancels the staged build of a plugin.
      *
-     * @param plugin the plugin to leave alone
+     * @param plugin the plugin whose staged build to cancel
      * @param by     who asked
-     * @return false when the staged file could not be deleted, in which case it will still apply
+     * @return false when the staged file could not be deleted. It then still applies.
      */
     public boolean cancel(TrackedPlugin plugin, String by) throws TrackingException {
 
@@ -131,7 +131,7 @@ public final class Installer {
      * @param project the project being installed
      * @param version the build to install
      * @param channel the channel this plugin should follow from now on
-     * @param by      who asked, for the audit trail
+     * @param by      who asked
      * @return the new tracking record
      */
     public TrackedPlugin install(ModrinthProject project, ModrinthVersion version,
@@ -140,12 +140,12 @@ public final class Installer {
     }
 
     /**
-     * Installs several builds together, or none of them.
+     * Installs several builds atomically.
      *
-     * @param pending what to install, in the order it should be recorded
+     * @param pending what to install in the order to record it
      * @param by      who asked
-     * @return the tracking records, in the same order
-     * @throws InstallException if any download or check fails, having written nothing
+     * @return the tracking records in the same order
+     * @throws InstallException if any download or check fails. Nothing is written.
      */
     public List<TrackedPlugin> install(List<Pending> pending, String by) throws TrackingException {
 
@@ -196,11 +196,9 @@ public final class Installer {
     /**
      * A build about to be installed.
      *
-     * @param explicit   false when it is only here because something else named it, which is what
-     *                   lets a later autoremove offer it once nothing needs it
-     * @param requiredBy the plugin whose install pulled this one in, or null when it was asked for
-     *                   outright. The root rather than the immediate parent: six months later the
-     *                   useful answer is which install brought it, not which link in the chain.
+     * @param explicit   false when it is only here because something else named it
+     * @param requiredBy the root plugin whose install pulled this one in, or null when it was asked
+     *                   for outright
      */
     public record Pending(ModrinthProject project, ModrinthVersion version, ReleaseChannel channel,
                           boolean explicit, String requiredBy) {
@@ -209,9 +207,7 @@ public final class Installer {
     /**
      * Puts a downloaded build into the plugins folder.
      *
-     * <p>The hash is what makes that safe. A <em>different</em> build sharing the file name is a
-     * genuine collision and still refused, because replacing a jar the server has open is what
-     * staging exists for.</p>
+     * <p>A different build with the same file name is refused.</p>
      */
     private void place(Path staged, Path target, String sha512) {
 
@@ -227,7 +223,7 @@ public final class Installer {
             try {
                 Files.deleteIfExists(staged);
             } catch (IOException ignored) {
-                // Staging is emptied on startup, so a download left behind costs one file until then.
+                // Staging is emptied on startup.
             }
 
             return;

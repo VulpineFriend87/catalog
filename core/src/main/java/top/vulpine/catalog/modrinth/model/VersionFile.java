@@ -6,12 +6,9 @@ import lombok.experimental.Accessors;
 /**
  * A single file attached to a Modrinth version.
  *
- * <p>A version usually carries one {@link #primary() primary} file, the plugin jar itself, and may
- * carry extra ones — Typewriter ships its extensions this way. Catalog never installs a
- * non-primary file without being told where it belongs.</p>
+ * <p>The {@link #primary() primary} file is the plugin jar. Catalog installs only that one.</p>
  *
- * <p>Bound by Gson through field names, so the fields are written to reflectively and there is no
- * constructor.</p>
+ * <p>Bound by Gson through field names. There is no constructor.</p>
  */
 @Getter
 @Accessors(fluent = true)
@@ -25,7 +22,7 @@ public final class VersionFile {
     private String fileType;
 
     /**
-     * The SHA-512 of this file, which is the identity Catalog indexes jars by.
+     * The SHA-512 of this file.
      *
      * @return the hash, or null if Modrinth did not report one
      */

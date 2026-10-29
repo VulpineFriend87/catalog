@@ -9,28 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 /**
- * Carries which screen a button was pressed on, without it ever being part of a real command.
+ * Remembers which screen a button was pressed on.
  *
- * <p>Buttons do not run the command they mean. They run {@code /catalog-do <screen> <command>},
- * which remembers the screen and then runs the command itself. Nothing about the screen reaches
- * Lamp or the arguments of any real command.</p>
+ * <p>Buttons run {@code /catalog-do <screen> <command>}. Only the command reaches Lamp. Only
+ * {@code /catalog} commands are run. {@link ClickCommand} registers the wrapper.</p>
  *
- * <p>That is the whole point. The commands themselves are then free to be shaped however reads
- * best — flags, switches, single arguments — instead of every one that a button can reach being
- * forced to end in a greedy string so a payload had somewhere to hide.</p>
- *
- * <p>Only Catalog's own commands are dispatched, and they run as whoever pressed the button, with
- * their permissions. A player typing the wrapper by hand can therefore do nothing they could not do
- * by typing the command directly.</p>
- *
- * <p>{@link ClickCommand} registers it, so the client is given it and sends it without asking
- * whether an unrecognised command was really meant.</p>
- *
- * <p>The command is handed straight to the tree rather than out through the server and back. That
- * is what gives the screen a lifetime: Lamp runs the command inline, so it has been read by the time
- * the call returns and can be cleared here. Bukkit's own dispatch returns before the command has
- * run, which would leave a screen nobody claimed sitting there for whatever executed next to pick
- * up. Both were measured rather than assumed.</p>
+ * <p>Commands are dispatched through Lamp. Bukkit's dispatch returns before the command runs.</p>
  */
 public final class ClickContext {
 
@@ -41,26 +25,22 @@ public final class ClickContext {
     private static final String NOWHERE = "-";
 
     /**
-     * Marks a payload as coming from a confirmation button, wrapping the screen to return to.
-     *
-     * <p>Confirming has to be a different press from asking. Without this the confirmation was
-     * "run the same command twice", which meant pressing a remove or version button twice in a row
-     * carried the action out without the dialog ever being read.</p>
+     * Marks a payload as the answer to a confirmation.
      */
     public static final String CONFIRM = "confirm:";
 
-    /** Marks an install, update or switch that leaves what it requires unmet. */
+    /** Marks an install, update or switch without its required plugins. */
     public static final String ALONE = "alone:";
 
     private final Map<String, String> pending = new ConcurrentHashMap<>();
 
     /**
-     * Set once the tree exists, because the commands it holds are built with this in hand.
+     * Set after the command tree is built.
      */
     private BiConsumer<CommandActor, String> dispatch;
 
     /**
-     * @param dispatch runs a command line, without its slash, inline through the command tree
+     * @param dispatch runs a command line without its slash through the command tree
      */
     public void dispatcher(BiConsumer<CommandActor, String> dispatch) {
         this.dispatch = dispatch;
@@ -83,8 +63,7 @@ public final class ClickContext {
         String screen = rest.substring(0, space);
         String command = rest.substring(space + 1).trim();
 
-        // Nothing but Catalog's own commands, so typing the wrapper by hand is never a way to run
-        // something else. It would run as the viewer either way, but there is no reason to allow it.
+        // Only Catalog's own commands.
         if (!isCatalog(command)) {
             return;
         }
@@ -97,10 +76,7 @@ public final class ClickContext {
             pending.put(name, screen);
         }
 
-        // Straight to the tree rather than out through the server and back. Bukkit's dispatch returns
-        // before the command it was given has run, which leaves the screen with no lifetime anyone
-        // can reason about; Lamp runs it inline, so it is read before this method returns and can
-        // be cleared here.
+        // Lamp runs it before returning.
         try {
             dispatch.accept(actor, command.substring(1));
         } finally {
@@ -115,9 +91,9 @@ public final class ClickContext {
     }
 
     /**
-     * Wraps a command so that pressing it also says which screen it was pressed on.
+     * Wraps a command with the screen it is offered from.
      *
-     * @param command the command to run, leading slash and all
+     * @param command the command to run with its leading slash
      * @param screen  the trail of the screen it is offered from, or null when it is not from one
      * @return what the button should run
      */
@@ -136,13 +112,10 @@ public final class ClickContext {
     }
 
     /**
-     * The command a button really runs, for showing in its hover text.
+     * The command inside a button's {@code /catalog-do} wrapper.
      *
-     * <p>The wrapper is not something anyone would type, and showing it would only invite someone
-     * to try.</p>
-     *
-     * @param command the button's command
-     * @return the command it stands for
+     * @param command a command with or without the wrapper
+     * @return the command without the wrapper and the screen
      */
     public static String strip(String command) {
 

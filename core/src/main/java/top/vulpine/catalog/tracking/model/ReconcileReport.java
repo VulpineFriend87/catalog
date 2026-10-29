@@ -16,7 +16,7 @@ import java.util.List;
 @Accessors(fluent = true)
 public final class ReconcileReport {
 
-    /** Recognized on Modrinth and now tracked, having been left alone until this point. */
+    /** Recognized on Modrinth and now tracked. */
     @Builder.Default
     private final List<TrackedPlugin> adopted = Collections.emptyList();
 
@@ -24,7 +24,7 @@ public final class ReconcileReport {
     @Builder.Default
     private final List<TrackedPlugin> moved = Collections.emptyList();
 
-    /** An update Catalog staged is now the jar on disk, so the restart that applies it has happened. */
+    /** An update Catalog staged is now the jar on disk. */
     @Builder.Default
     private final List<TrackedPlugin> applied = Collections.emptyList();
 
@@ -40,7 +40,7 @@ public final class ReconcileReport {
     @Builder.Default
     private final List<TrackedPlugin> notApplied = Collections.emptyList();
 
-    /** Same file contents under a new name, so only the recorded file name changed. */
+    /** Same file contents under a new name. */
     @Builder.Default
     private final List<TrackedPlugin> renamed = Collections.emptyList();
 
@@ -48,15 +48,15 @@ public final class ReconcileReport {
     @Builder.Default
     private final List<TrackedPlugin> completed = Collections.emptyList();
 
-    /** No longer installed, so tracking stopped. Deleting a jar by hand is a valid way to uninstall. */
+    /** No longer installed. Tracking stopped. */
     @Builder.Default
     private final List<TrackedPlugin> removed = Collections.emptyList();
 
-    /** Not on Modrinth. Listed, never touched. */
+    /** Not on Modrinth. Listed and never touched. */
     @Builder.Default
     private final List<InstalledJar> unknown = Collections.emptyList();
 
-    /** Skipped because put in the ignore list. */
+    /** On the ignore list. */
     @Builder.Default
     private final List<InstalledJar> ignored = Collections.emptyList();
 
@@ -68,15 +68,12 @@ public final class ReconcileReport {
 
     /**
      * Recognized on Modrinth but left untracked because auto-tracking is off.
-     *
-     * <p>Distinct from {@link #unknown()}: Catalog knows perfectly well what these are, and is
-     * standing back because it was told to.</p>
      */
     @Builder.Default
     private final List<InstalledJar> notAdopted = Collections.emptyList();
 
     /**
-     * Whether anything at all changed.
+     * Whether anything changed.
      *
      * @return true if tracking state was modified
      */

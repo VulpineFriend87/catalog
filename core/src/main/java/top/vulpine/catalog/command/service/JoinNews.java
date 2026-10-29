@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * What to tell staff when they join.
+ * Builds the join notice for a viewer.
  *
  * <p>Open updates are repeated on every join. What the last start did is told once per viewer.</p>
  */
@@ -29,7 +29,7 @@ public final class JoinNews {
     private final Catalog catalog;
 
     /**
-     * The news each viewer has already heard this session, by plugin and build.
+     * What each viewer has heard this session.
      */
     private final Map<String, Set<String>> heard = new ConcurrentHashMap<>();
 
@@ -45,7 +45,7 @@ public final class JoinNews {
     }
 
     /**
-     * Sends what this viewer has not heard yet, if anything.
+     * Sends what this viewer has not heard yet.
      */
     public void tell(Viewer viewer) {
 

@@ -14,7 +14,7 @@ import static top.vulpine.catalog.command.screen.widget.Palette.*;
 import static top.vulpine.catalog.command.screen.widget.Widgets.*;
 
 /**
- * The line that says what an action did.
+ * The result lines of actions.
  */
 public final class Outcomes {
 

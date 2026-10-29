@@ -12,10 +12,9 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * One thing Catalog did, or found had been done to it.
+ * One history entry.
  *
- * <p>Serialized to {@code history.json}. A plain class bound by field name, like everything else
- * Gson reads here.</p>
+ * <p>Serialized to {@code history.json} and bound by field name.</p>
  */
 @Getter
 @Builder
@@ -26,15 +25,15 @@ public final class HistoryEntry {
 
     private Event event;
 
-    /** Absent when the event is not about one plugin, as when the trash is emptied. */
+    /** Absent when the event is not about one plugin. */
     private String projectId;
 
-    /** The name the plugin had when this happened, which is what the row shows. */
+    /** The name the plugin had when this happened. */
     private String name;
 
     private String slug;
 
-    /** Absent when Catalog did it on its own, which is how the screen knows to say so. */
+    /** Absent when Catalog did it automatically. */
     private String by;
 
     private String from;
@@ -43,17 +42,17 @@ public final class HistoryEntry {
 
     private String channel;
 
-    /** The new value, for the settings a number or a word rather than a version. */
+    /** The new value of a setting. */
     private String value;
 
-    /** How many, when one row stands for several plugins. */
+    /** How many plugins one row stands for. */
     private int count;
 
-    /** The names behind {@link #count}, shown in the hover. */
+    /** The names behind {@link #count}. */
     private List<String> names;
 
     /**
-     * @return true if a person did this, rather than Catalog deciding on its own
+     * @return true if a person did this
      */
     public boolean byPerson() {
         return by != null && !by.isBlank();
@@ -146,7 +145,7 @@ public final class HistoryEntry {
      * A plugin the server did not enable after an update or install.
      *
      * @param updated false for a first install, true for an update, switch or rollback
-     * @param reason  why, as the server reported it
+     * @param reason  what the server reported
      */
     public static HistoryEntry notEnabled(TrackedPlugin plugin, boolean updated, String reason) {
         return about(plugin, null)
@@ -168,7 +167,7 @@ public final class HistoryEntry {
     }
 
     /**
-     * A removal deleted for good, named from what the trash kept rather than from a tracked plugin.
+     * A removal deleted for good. The name comes from the trash entry.
      */
     public static HistoryEntry deleted(TrashEntry entry, String by) {
         return builder()
@@ -189,8 +188,7 @@ public final class HistoryEntry {
     /**
      * A staged build the restart put in place.
      *
-     * <p>Nobody is credited: the restart applied it, and whoever queued it is already named on the
-     * row that queued it.</p>
+     * <p>Nobody is credited.</p>
      */
     public static HistoryEntry applied(TrackedPlugin plugin) {
         return about(plugin, null)
@@ -204,7 +202,7 @@ public final class HistoryEntry {
     }
 
     /**
-      * A plugin taken under management, by the scan or because someone asked.
+      * A plugin the scan or a person started tracking.
       */
     public static HistoryEntry adopted(TrackedPlugin plugin, String by) {
         return about(plugin, by).event(Event.ADOPTED).to(plugin.versionNumber()).build();

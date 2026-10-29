@@ -10,6 +10,7 @@ import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.annotation.Switch;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
@@ -98,7 +99,7 @@ public final class VersionsCommand implements OrphanCommand {
                         Press.screenOf(data)));
 
             } catch (Exception e) {
-                send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
+                send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));
             }
         });
     }
@@ -106,8 +107,8 @@ public final class VersionsCommand implements OrphanCommand {
     /**
      * The newest build of each channel.
      *
-     * @param compatible the compatible builds, newest first
-     * @return the newest of each channel, channels with none absent
+     * @param compatible the compatible builds sorted newest first
+     * @return the newest build of each channel that has one
      */
     private static Map<ReleaseChannel, ModrinthVersion> newestOfEachChannel(
             List<ModrinthVersion> compatible) {

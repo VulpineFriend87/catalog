@@ -2,7 +2,6 @@ package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.navigation.Trail;
 import top.vulpine.catalog.command.permission.Permitted;
@@ -34,7 +33,7 @@ public final class DependenciesPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text(project.title(), BRAND).decorate(TextDecoration.BOLD))
+                .append(title(project.title(), BRAND))
                 .append(Component.text(" " + version.versionNumber(), TEXT))
                 .append(Component.text("  dependencies", MUTED))
                 .build());

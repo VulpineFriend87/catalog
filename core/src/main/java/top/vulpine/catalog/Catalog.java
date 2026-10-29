@@ -39,12 +39,13 @@ import top.vulpine.commons.log.Logger;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * Catalog's services, wired together for one platform.
+ * Catalog's services for one platform.
  */
 @Getter
 public final class Catalog {
@@ -72,11 +73,11 @@ public final class Catalog {
     private Dependents dependents;
     private EnableCheck enableCheck;
 
-    /** Every Minecraft version Modrinth knows, loaded the first time it is needed. */
+    /** Every Minecraft version Modrinth knows. Loaded on first use. */
     private volatile GameVersions gameVersions;
 
     /**
-     * @param configuration the current configuration, read again after a reload
+     * @param configuration the current configuration
      */
     public Catalog(Platform platform, Supplier<Config> configuration) {
         this.platform = platform;
@@ -117,7 +118,7 @@ public final class Catalog {
         this.installer = new Installer(platform, downloader, tracking, removals, this::defaults, history);
         this.updates = new Updates(platform, modrinth, tracking, installer,
                 () -> configuration.get().tracking.defaults.soakMinutes, projects::dependenciesOf,
-                history, () -> library.index());
+                projects::named, history, () -> library.index());
         this.library = new Library(platform, modrinth, tracking, ignored, this::defaults,
                 () -> configuration.get().tracking.autoTrack, history);
         this.dependents = new Dependents(tracking, hashes -> modrinth.identify(hashes).join());
@@ -204,7 +205,7 @@ public final class Catalog {
     // Updates
 
     /**
-     * Asks Modrinth what is out of date and remembers the answer.
+     * Asks Modrinth what is out of date.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
@@ -235,7 +236,7 @@ public final class Catalog {
     // History
 
     /**
-     * What Catalog has done, newest first.
+     * What Catalog has done. Newest first.
      *
      * @param projectId only this plugin, or null for every plugin
      * @param by        only this author, or null for everyone
@@ -254,7 +255,7 @@ public final class Catalog {
     }
 
     /**
-     * @return every plugin the history mentions, for tab completion
+     * @return every plugin the history mentions
      */
     public List<String> loggedPlugins() {
         return history.plugins();
@@ -289,7 +290,7 @@ public final class Catalog {
     /**
      * Blocks on Modrinth, so it must be called off the main thread.
      *
-     * @return the projects a build declares of one type, named
+     * @return the named projects a build declares of one type
      */
     public List<DependencyResolver.Requirement> declared(ModrinthVersion version, DependencyType type) {
         return projects.declared(version, type);
@@ -305,9 +306,18 @@ public final class Catalog {
     }
 
     /**
+     * Blocks on Modrinth, so it must be called off the main thread.
+     *
+     * @return the projects keyed by id
+     */
+    public Map<String, ModrinthProject> projects(Collection<String> ids) {
+        return projects.byId(ids);
+    }
+
+    /**
      * Blocks on Modrinth the first time, so it must be called off the main thread.
      *
-     * @return what writes Minecraft versions as ranges
+     * @return the Minecraft versions Modrinth knows
      */
     public GameVersions gameVersions() {
 
@@ -331,7 +341,7 @@ public final class Catalog {
     }
 
     /**
-     * @return the loader names this server can use, most specific first
+     * @return the loaders this server can use sorted most specific first
      */
     public List<String> platformLoaders() {
         return platform.target().loaders();
@@ -348,9 +358,9 @@ public final class Catalog {
     }
 
     /**
-     * Drops a staged build so the next restart leaves the plugin as it is.
+     * Cancels the staged build of a plugin.
      *
-     * @param plugin the plugin to leave alone
+     * @param plugin the plugin whose staged build to cancel
      * @return false when the staged file could not be deleted
      */
     public boolean cancelUpdate(TrackedPlugin plugin, String by) {
@@ -364,14 +374,14 @@ public final class Catalog {
     }
 
     /**
-     * Installs several builds together, or none of them.
+     * Installs several builds atomically.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
-     * @param pending what to install, in the order it should be recorded
+     * @param pending what to install in the order to record it
      * @param by      who asked
-     * @return the tracking records, in the same order
-     * @throws InstallException if any download or check fails, having written nothing
+     * @return the tracking records in the same order
+     * @throws InstallException if any download or check fails. Nothing is written.
      */
     public List<TrackedPlugin> install(List<Installer.Pending> pending, String by) {
 
@@ -426,11 +436,11 @@ public final class Catalog {
     }
 
     /**
-     * Puts a removed plugin back and starts tracking it again.
+     * Restores a removed plugin and tracks it again.
      *
      * @param entry what to restore
      * @param by    who asked
-     * @return the plugin Catalog is tracking again, or null if it was never tracked to begin with
+     * @return the plugin Catalog is tracking again, or null if it was never tracked
      * @throws InstallException if the jar is gone, or something already occupies its file name
      */
     public TrackedPlugin restore(TrashEntry entry, String by) {
@@ -475,7 +485,7 @@ public final class Catalog {
     // Tracking
 
     /**
-     * Stops managing a plugin. The jar is not touched.
+     * Stops managing a plugin.
      *
      * @param plugin the plugin to untrack
      * @param by     who asked
@@ -483,12 +493,12 @@ public final class Catalog {
     public void untrack(TrackedPlugin plugin, String by) {
         library.untrack(plugin, by);
 
-        // The scan is what fills the untracked list.
+        // The scan fills the untracked list.
         library.index();
     }
 
     /**
-     * Puts a jar back under management and rescans, so it appears without a restart.
+     * Tracks a jar again and rescans the plugins folder.
      *
      * @param jar the file to stop ignoring
      * @return true if it was ignored and now is not
@@ -511,7 +521,7 @@ public final class Catalog {
     }
 
     /**
-     * Clears the restart fresh installs are waiting for once something else has enabled them.
+     * Clears {@code pendingLoad} on fresh installs that are already enabled.
      */
     public void noticeLoaded() {
         saving(library::noticeLoaded);
@@ -532,7 +542,7 @@ public final class Catalog {
     }
 
     /**
-     * Runs work that writes the tracking file, logging a failure instead of throwing it.
+     * Runs {@code work} and logs the {@link TrackingException} it throws.
      */
     private void saving(Save work) {
 

@@ -21,7 +21,7 @@ public final class DependencyResolver {
     private static final int MAX_DEPTH = 10;
 
     /**
-     * This is an interface so every rule below can be tested without a network.
+     * Finds the build a project would install.
      */
     @FunctionalInterface
     public interface Versions {
@@ -46,19 +46,19 @@ public final class DependencyResolver {
     }
 
     /**
-     * Everything a build declares, resolved against what is already here.
+     * Everything a build declares against what is already here.
      *
      * <p>Blocks on the lookups, so it must be called off the main thread.</p>
      *
      * @param root the build about to be installed
-     * @return what it requires, what it can use, and what it must not sit alongside
+     * @return what it requires, what it can use and what conflicts with it
      */
     public Resolution resolve(ModrinthVersion root) {
 
         List<Requirement> required = new ArrayList<>();
 
-        // The build being installed counts as already visited. Without that, a project reachable
-        // from its own dependencies comes back as a requirement of itself.
+        // The build being installed counts as visited. A project reachable from its own
+        // dependencies would otherwise come back as a requirement of itself.
         Set<String> walked = new LinkedHashSet<>();
 
         if (root.projectId() != null) {
@@ -99,11 +99,9 @@ public final class DependencyResolver {
     }
 
     /**
-     * Walks the required dependencies of one build, adding each project once.
+     * Walks the required dependencies of one build. Each project is added once.
      *
-     * <p>A dependency already on the server is recorded and not followed. Whatever it requires is
-     * either satisfied or already broken, and either way it is not something this install caused or
-     * can be blamed for.</p>
+     * <p>A dependency already on the server is recorded and not followed.</p>
      */
     private void follow(ModrinthVersion version, int depth, Set<String> visited,
                         List<Requirement> out) {
@@ -116,8 +114,7 @@ public final class DependencyResolver {
 
             String projectId = dependency.projectId();
 
-            // The visited set is what makes a cycle stop. Nothing prevents an author declaring one,
-            // and two plugins that require each other would otherwise be followed forever.
+            // The visited set stops cycles. Two plugins can require each other.
             if (projectId == null || !visited.add(projectId)) {
                 continue;
             }
@@ -137,16 +134,16 @@ public final class DependencyResolver {
     }
 
     /**
-     * One project a build named, and what this server has to say about it.
+     * One project a build names and its state on this server.
      *
      * @param projectId the project Modrinth was pointed at
      * @param name      the project's title, or its id until it is named
      * @param slug      the project's slug, or its id until it is named
      * @param version   the build installed here, or the one that would be installed, or null
-     * @param available the build that would be installed, null when it is already here or when
+     * @param available the build that would be installed, or null when it is already here or
      *                  nothing published runs on this server
      * @param installed whether it is already tracked
-     * @param type      what the author called it
+     * @param type      the dependency type the build declares
      */
     public record Requirement(String projectId, String name, String slug, String version,
                               ModrinthVersion available, boolean installed, DependencyType type) {
@@ -174,7 +171,7 @@ public final class DependencyResolver {
             return !installed && available == null;
         }
 
-        /** Whether it is here and the author said it must not be. */
+        /** Whether it is installed and declared incompatible. */
         public boolean conflicting() {
             return type == DependencyType.INCOMPATIBLE && installed;
         }
@@ -187,16 +184,16 @@ public final class DependencyResolver {
     }
 
     /**
-     * What a build needs, in the three shapes that lead to different decisions.
+     * What a build needs.
      *
-     * @param required  every required project, flattened through the whole graph
+     * @param required  every required project in the whole graph
      * @param optional  what the root alone names as optional
      * @param conflicts projects declared incompatible that are installed anyway
      */
     public record Resolution(List<Requirement> required, List<Requirement> optional,
                              List<Requirement> conflicts) {
 
-        /** The required projects that are not here yet, in the order they were found. */
+        /** The required projects that are not here yet in the order they were found. */
         public List<Requirement> missing() {
 
             List<Requirement> missing = new ArrayList<>();

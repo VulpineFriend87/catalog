@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("ExitTasks")
 class ExitTasksTest {
 
-    /** No process has this id, so the second JVM's wait returns at once. */
+    /** No process has this id. The second JVM's wait returns at once. */
     private static final String GONE = String.valueOf(Long.MAX_VALUE);
 
     @TempDir

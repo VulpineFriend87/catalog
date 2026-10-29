@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * Jars to replace or delete as the JVM exits.
  *
- * <p>{@link #run()} does them from a shutdown hook. Jars that are still locked, which on Windows is
- * every jar Velocity loaded, go to a second JVM started on {@link #main}, which waits for this one
- * to exit and tries again. What fails there too is written to a log that
- * {@link #report()} reads on the next start.</p>
+ * <p>{@link #run()} does them from a shutdown hook. Jars that are still locked go to a second JVM
+ * started on {@link #main}. It waits for this one to exit and tries again. On Windows that is every
+ * jar Velocity loaded. What fails there too goes to a log that {@link #report()} reads on the next
+ * start.</p>
  */
 public final class ExitTasks {
 
@@ -35,12 +35,12 @@ public final class ExitTasks {
     private final Path dataFolder;
     private final Path ownJar;
 
-    /** Keyed by the jar in the plugins folder, so a later task for the same jar wins. */
+    /** Keyed by the jar in the plugins folder. A later task for the same jar wins. */
     private final Map<Path, Task> tasks = new ConcurrentHashMap<>();
 
     /**
      * @param dataFolder where the log and the copy of Catalog's jar go
-     * @param ownJar     the jar Catalog runs from, which the second JVM is started on a copy of
+     * @param ownJar     the jar Catalog runs from. The second JVM starts on a copy of it.
      */
     public ExitTasks(Path dataFolder, Path ownJar) {
         this.dataFolder = dataFolder;
@@ -48,7 +48,7 @@ public final class ExitTasks {
     }
 
     /**
-     * Replaces an installed jar with a downloaded build, then gives it the published name.
+     * Replaces an installed jar with a downloaded build and gives it the published name.
      *
      * @param staged    the downloaded build
      * @param installed the jar it replaces
@@ -76,7 +76,7 @@ public final class ExitTasks {
     }
 
     /**
-     * Does every task, for a shutdown hook. Never throws.
+     * Does every task from a shutdown hook. Never throws.
      */
     public void run() {
 
@@ -124,7 +124,7 @@ public final class ExitTasks {
     }
 
     /**
-     * Starts the second JVM on a copy of Catalog's jar, so that Catalog can replace its own.
+     * Starts the second JVM on a copy of Catalog's jar. Catalog can then replace its own.
      *
      * @return false if it could not be started
      */
@@ -173,7 +173,7 @@ public final class ExitTasks {
     }
 
     /**
-     * The second JVM: waits for the server's process to exit, then does the tasks it was given.
+     * The second JVM. Waits for the server's process to exit and does the tasks it was given.
      *
      * @param args the server's process id, the log, then each task as its kind and paths
      */
@@ -214,7 +214,7 @@ public final class ExitTasks {
     /**
      * One change to one jar.
      *
-     * @param staged    the downloaded build, for a replacement
+     * @param staged    the downloaded build of a replacement
      * @param jar       the jar in the plugins folder
      * @param published the name a replacement ends up with
      */
@@ -234,8 +234,7 @@ public final class ExitTasks {
                 return;
             }
 
-            // Over the old jar first, in one move: a failure then leaves the old jar alone rather
-            // than two jars of the same plugin.
+            // Over the old jar first in one move. On failure the old jar stays.
             move(staged, jar);
 
             if (!jar.equals(published) && !Files.exists(published)) {

@@ -3,7 +3,6 @@ package top.vulpine.catalog.command.screen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.install.DependencyResolver;
@@ -51,7 +50,7 @@ public final class InfoPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text(project.title(), BRAND).decorate(TextDecoration.BOLD))
+                .append(title(project.title(), BRAND))
                 .append(status(installed, untracked, UpdateChecker.offers(installed, latest)))
                 .hoverEvent(HoverEvent.showText(identity(project, installed, offered)))
                 .build());
@@ -158,8 +157,7 @@ public final class InfoPage {
         }
 
         if (offered != null) {
-            // Not the project's newest build: the newest one that runs here, on the channel being
-            // followed. Saying "latest" invited exactly the wrong reading.
+            // The newest build that runs here on the followed channel.
             hover.append(Component.newline())
                     .append(Component.newline())
                     .append(Component.text("newest here  ", MUTED))
@@ -175,7 +173,7 @@ public final class InfoPage {
     }
 
     /**
-     * The build a page describes, as the argument that names it.
+     * The argument naming the build a page describes.
      */
     private static String described(ModrinthVersion offered) {
         return offered == null ? "" : " " + offered.id();
@@ -207,7 +205,7 @@ public final class InfoPage {
     }
 
     /**
-     * @param here the loaders this server can use, shown brighter
+     * @param here the loaders this server can use
      */
     private static Component loaders(ModrinthProject project, List<String> here) {
 

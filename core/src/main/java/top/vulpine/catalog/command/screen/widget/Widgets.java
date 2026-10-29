@@ -5,6 +5,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.navigation.Screen;
@@ -16,13 +17,20 @@ import java.util.List;
 import static top.vulpine.catalog.command.screen.widget.Palette.*;
 
 /**
- * The pieces screens are built from.
+ * The buttons, lines and fields screens use.
  */
 public final class Widgets {
 
     public static final String INDENT = "  ";
 
     private Widgets() {
+    }
+
+    /**
+     * Bold text at the head of a screen.
+     */
+    public static Component title(String text, TextColor colour) {
+        return Component.text(text, colour).decorate(TextDecoration.BOLD);
     }
 
     public static Component field(String label, Component value) {
@@ -43,7 +51,7 @@ public final class Widgets {
     }
 
     /**
-     * The command that reopens the screen something was launched from, with its own trail.
+     * The command that reopens the screen something was launched from.
      *
      * @param from     the trail a payload carried, or null when there was none
      * @param fallback where to go when nothing was carried
@@ -56,7 +64,7 @@ public final class Widgets {
             return fallback;
         }
 
-        // A confirmation reopened from itself is redrawn, never confirmed.
+        // A confirmation reopened from itself is redrawn and never confirmed.
         return from(screen.reopen(), screen instanceof Screen.ChangeScreen ? from : Trail.parent(from));
     }
 
@@ -99,10 +107,7 @@ public final class Widgets {
     }
 
     /**
-     * Rewrites a screen for somewhere that cannot click.
-     *
-     * <p>Every widget carries the command it runs, so a console reads the command in place of a
-     * button it has no way to press.</p>
+     * Rewrites a screen for a viewer that cannot click.
      *
      * @param component the screen as a player would see it
      * @return the same screen with each button replaced by its command
@@ -131,7 +136,7 @@ public final class Widgets {
     }
 
     /**
-     * The colour a widget reads as, which is on its label rather than its brackets.
+     * The colour of a widget's label.
      */
     private static TextColor labelColour(Component widget) {
 
@@ -159,7 +164,7 @@ public final class Widgets {
     }
 
     /**
-     * The button that answers a confirmation, carrying everything the press that asked it carried.
+     * The command of a button that answers a confirmation.
      */
     public static String confirming(String command, Press asked) {
         return from(command, (asked == null ? Press.on(null) : asked).confirming().data());

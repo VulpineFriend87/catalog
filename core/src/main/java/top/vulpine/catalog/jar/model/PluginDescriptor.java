@@ -5,14 +5,9 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 
 /**
- * What a plugin jar says about itself, read from its own descriptor file.
+ * The fields of a plugin jar's descriptor file.
  *
- * <p>None of this decides what a jar <em>is</em> — that is settled by hash against the Modrinth
- * API. It answers the questions a hash cannot: which plugin a file belongs to, whether two jars
- * claim the same plugin, and whether a jar was compiled for a newer Java than the server runs.</p>
- *
- * <p>Every field may be absent. A jar with no readable descriptor is not an error; it is just a jar
- * Catalog knows less about.</p>
+ * <p>Every field may be absent.</p>
  */
 @Getter
 @Builder
@@ -41,8 +36,7 @@ public final class PluginDescriptor {
     /**
      * The Java feature version this jar was compiled for.
      *
-     * <p>Class file major versions start at 45 for Java 1.1, so 61 means Java 17 and 65 means
-     * Java 21.</p>
+     * <p>Class file major version 61 is Java 17 and 65 is Java 21.</p>
      *
      * @return the Java version, or 0 if no class file could be read
      */
@@ -51,7 +45,7 @@ public final class PluginDescriptor {
     }
 
     /**
-     * Whether this jar declares a plugin Catalog can completely reason about.
+     * Whether the descriptor names a plugin.
      *
      * @return true if a plugin name was found
      */

@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Where removed jars go instead of being deleted.
+ * Where removed jars are kept.
  *
- * <p>A failed delete is a normal outcome on Windows, where a loaded jar is locked.</p>
+ * <p>A failed delete is normal on Windows. A loaded jar is locked there.</p>
  */
 public final class TrashBin {
 
@@ -36,7 +36,7 @@ public final class TrashBin {
 
     /**
      * @param directory where removed jars are kept
-     * @param clock     what stamps a removal, which a test fixes to force two into one millisecond
+     * @param clock     what stamps a removal
      */
     TrashBin(Path directory, Clock clock) {
         this.directory = directory;
@@ -49,9 +49,9 @@ public final class TrashBin {
      * @param jar       the file in the plugins folder
      * @param plugin    what Catalog knew about it, or null if it was never tracked
      * @param removedBy who asked
-     * @return what happened, including whether the original is actually gone
-     * @throws InstallException if the jar could not be copied into the bin, in which case the
-     *                          original is untouched
+     * @return what happened and whether the original is gone
+     * @throws InstallException if the jar could not be copied into the bin. The original is then
+     *                          untouched.
      */
     public Result bin(Path jar, TrackedPlugin plugin, String removedBy) {
 
@@ -100,7 +100,7 @@ public final class TrashBin {
     }
 
     /**
-     * The stamp to file the next removal under, always past every one already there.
+     * The stamp to file the next removal under. Always past every one already there.
      */
     private long nextStamp() {
 
@@ -126,8 +126,8 @@ public final class TrashBin {
     }
 
     /**
-     * The millisecond a stored name is filed under, or {@link Long#MIN_VALUE} if it was not named
-     * by us and therefore claims no stamp at all.
+     * The millisecond a stored name is filed under, or {@link Long#MIN_VALUE} for a name Catalog
+     * did not give.
      */
     private static long stampOf(String storedAs) {
 
@@ -145,7 +145,7 @@ public final class TrashBin {
     }
 
     /**
-     * Everything currently in the bin, newest removal first.
+     * Everything currently in the bin. Newest first.
      *
      * @return the entries, or an empty list if the bin has never been used
      */
@@ -190,10 +190,10 @@ public final class TrashBin {
     }
 
     /**
-     * Puts a jar back where it came from and drops it from the bin.
+     * Restores a jar to the plugins folder and drops it from the bin.
      *
      * @param entry  what to restore
-     * @param target where the jar should end up, which is the plugins folder
+     * @param target where the jar should end up in the plugins folder
      * @throws InstallException if the target already exists or the copy fails
      */
     public void restore(TrashEntry entry, Path target) {
@@ -231,8 +231,7 @@ public final class TrashBin {
             Files.deleteIfExists(stored);
             Files.deleteIfExists(stored.resolveSibling(stored.getFileName() + SIDECAR));
         } catch (IOException ignored) {
-            // Leaving a file behind costs disk and nothing else; failing the caller would cost
-            // them the action they actually asked for.
+            // A leftover file only costs disk space.
         }
     }
 
@@ -281,7 +280,7 @@ public final class TrashBin {
     }
 
     /**
-     * Reads an entry's metadata, falling back to what the stored name alone can say.
+     * Reads an entry's metadata or falls back to the stored name.
      */
     private TrashEntry read(Path stored) {
 
@@ -299,7 +298,7 @@ public final class TrashBin {
                 }
 
             } catch (Exception ignored) {
-                // Falls through to the name, which cannot be corrupt because it is the file itself.
+                // Falls through to the name of the file itself.
             }
         }
 
@@ -311,7 +310,7 @@ public final class TrashBin {
         int split = storedAs.indexOf('-');
         long stamp = stampOf(storedAs);
 
-        // Named by hand rather than by us. It still restores; it just has no date.
+        // Named by hand. It restores without a date.
         String fileName = split < 0 ? storedAs : storedAs.substring(split + 1);
         Instant removedAt = stamp == Long.MIN_VALUE ? null : Instant.ofEpochMilli(stamp);
 
@@ -353,15 +352,14 @@ public final class TrashBin {
         try {
             Files.writeString(metadata, Json.gson().toJson(entry), StandardCharsets.UTF_8);
         } catch (IOException ignored) {
-            // The jar is safe, which is the part that cannot be reconstructed. Without the sidecar
-            // a restore loses the Modrinth identity and nothing else.
+            // The jar is safe. Without the sidecar a restore loses only the Modrinth identity.
         }
     }
 
     /**
      * The outcome of binning a file.
      *
-     * @param entry   what was written, whose {@code storedAs} identifies this exact removal
+     * @param entry   what was written. Its {@code storedAs} identifies this removal.
      * @param stored  where the copy lives
      * @param deleted whether the original is gone
      */

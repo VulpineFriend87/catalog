@@ -15,6 +15,7 @@ import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.ServerTarget;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Asking Modrinth about projects, narrowed to what this server can run.
+ * Asks Modrinth about the projects this server can run.
  *
  * <p>Every method blocks, so none may be called on the server main thread.</p>
  */
@@ -55,7 +56,7 @@ public final class Projects {
     }
 
     /**
-     * Searches Modrinth, narrowed to what this server could actually run.
+     * Searches Modrinth for what this server can run.
      *
      * @param query  the search text
      * @param limit  how many results to return
@@ -85,20 +86,20 @@ public final class Projects {
     }
 
     /**
-     * Every build of a project this server could run, newest first, on any channel.
+     * Every build of a project this server can run on any channel.
      *
      * @param idOrSlug the project to list
-     * @return the compatible versions, newest published first
+     * @return the compatible versions sorted newest first
      */
     public List<ModrinthVersion> compatibleVersions(String idOrSlug) {
         return versions(idOrSlug, platform.target().gameVersions());
     }
 
     /**
-     * Every build of a project for this server's platform, newest first, on any Minecraft version.
+     * Every build of a project for this server's platform on any Minecraft version.
      *
      * @param idOrSlug the project to list
-     * @return the versions, newest published first
+     * @return the versions sorted newest first
      */
     public List<ModrinthVersion> allVersions(String idOrSlug) {
         return versions(idOrSlug, null);
@@ -142,7 +143,7 @@ public final class Projects {
      * The build an install would fetch: the newest stable one, or the newest of anything when the
      * project has never published a stable build for this server.
      *
-     * @param compatible what this server can run, newest first
+     * @param compatible what this server can run sorted newest first
      * @return the build to offer, or null when the list is empty
      */
     public static ModrinthVersion installTarget(List<ModrinthVersion> compatible) {
@@ -160,7 +161,7 @@ public final class Projects {
      * What a build depends on.
      *
      * @param version the build being considered
-     * @return the resolution, with required dependencies followed through the whole graph
+     * @return the resolution with required dependencies followed through the whole graph
      */
     public DependencyResolver.Resolution dependenciesOf(ModrinthVersion version) {
 
@@ -172,10 +173,10 @@ public final class Projects {
     }
 
     /**
-     * What a build declares of one type, named and checked against what is installed.
+     * The named projects a build declares of one type.
      *
      * @param version the build, or null for none
-     * @return the declared projects, without looking for builds to install
+     * @return the declared projects. No builds to install are looked up.
      */
     public List<DependencyResolver.Requirement> declared(ModrinthVersion version, DependencyType type) {
 
@@ -200,9 +201,10 @@ public final class Projects {
     }
 
     /**
-     * Puts the project's title and slug, and the installed build, on each requirement.
+     * Puts the project's title and slug and the installed build on each requirement.
      *
-     * @return the requirements in the same order, left under their ids when Modrinth cannot be reached
+     * @return the requirements in the same order. They keep their ids when Modrinth cannot be
+     *         reached.
      */
     public List<DependencyResolver.Requirement> named(List<DependencyResolver.Requirement> requirements) {
 
@@ -210,21 +212,13 @@ public final class Projects {
             return requirements;
         }
 
-        Map<String, ModrinthProject> projects = new HashMap<>();
         Set<String> ids = new LinkedHashSet<>();
 
         for (DependencyResolver.Requirement requirement : requirements) {
             ids.add(requirement.projectId());
         }
 
-        try {
-            for (ModrinthProject project : modrinth.projects(ids).join()) {
-                projects.put(project.id(), project);
-            }
-        } catch (Exception ignored) {
-            // The ids are still enough to name and act on a row.
-        }
-
+        Map<String, ModrinthProject> projects = byId(ids);
         List<DependencyResolver.Requirement> named = new ArrayList<>();
 
         for (DependencyResolver.Requirement requirement : requirements) {
@@ -239,6 +233,30 @@ public final class Projects {
         }
 
         return named;
+    }
+
+    /**
+     * Several projects in one request.
+     *
+     * @return the projects keyed by id. Empty when Modrinth cannot be reached.
+     */
+    public Map<String, ModrinthProject> byId(Collection<String> ids) {
+
+        Map<String, ModrinthProject> projects = new HashMap<>();
+
+        if (ids.isEmpty()) {
+            return projects;
+        }
+
+        try {
+            for (ModrinthProject project : modrinth.projects(ids).join()) {
+                projects.put(project.id(), project);
+            }
+        } catch (Exception ignored) {
+            // The ids are still enough to name and act on a row.
+        }
+
+        return projects;
     }
 
 }

@@ -95,9 +95,7 @@ class JarInspectorTest {
     @DisplayName("a shaded library's own descriptor does not hijack the plugin name")
     void firstDescriptorWins() throws IOException {
 
-        // A plugin that shades a library shipping its own plugin.yml can end up with both
-        // concatenated in the jar. Taking the last name found reports the library as the plugin,
-        // which is how three unrelated jars came back all claiming to be InventoryFramework.
+        // A shaded library can bring its own plugin.yml. The first name found is the plugin's.
         Path jar = TestJars.builder(directory, "shaded.jar")
                 .descriptor("plugin.yml", """
                         name: DuelsEngine

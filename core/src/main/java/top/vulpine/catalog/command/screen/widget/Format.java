@@ -15,7 +15,7 @@ public final class Format {
     }
 
     /**
-     * What to call a jar Catalog does not track, which has no Modrinth name to use.
+     * The name an untracked jar is shown under.
      *
      * @param jar the file
      * @return the name from its plugin.yml, or the file name

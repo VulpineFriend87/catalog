@@ -15,10 +15,8 @@ import java.util.regex.Pattern;
 /**
  * The rule that a command must read its screen before it leaves the dispatch thread.
  *
- * <p>{@link ClickContext#press} clears the screen in a {@code finally} the moment Lamp's dispatch
- * returns. A command body that hops to another thread first therefore finds nothing, and the button
- * silently stops redrawing the screen it was pressed on. Nothing in the types says so, so it is
- * said here.</p>
+ * <p>{@link ClickContext#press} clears the screen when Lamp's dispatch returns. A command that
+ * reads it from another thread finds nothing.</p>
  */
 @DisplayName("click context")
 class ClickContextRuleTest {

@@ -14,19 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 class CommandsTest {
 
     /**
-     * Registration is where Lamp checks the shape of every command, and none of what it checks is
-     * visible to the compiler: optional parameters and flags must each come last, and so must a
-     * parameter that may contain spaces. Getting that wrong throws while the server is starting,
-     * which means the plugin does not load at all.
-     *
-     * <p>Building the tree needs no platform, so the whole command surface can be proven to
-     * register here rather than on someone's server.</p>
+     * Lamp checks the shape of every command at registration. Optional parameters, flags and
+     * parameters with spaces must come last. A wrong shape keeps the plugin from loading.
      */
     @Test
     @DisplayName("every command has a shape Lamp will accept")
     void registers() {
 
-        // Stands in for the platform, which is the only thing missing outside a server.
+        // Stands in for the platform.
         SenderResolver<CommandActor> sender = new SenderResolver<>() {
 
             @Override
@@ -46,7 +41,7 @@ class CommandsTest {
                 .senderResolver(sender)
                 .build();
 
-        // Never dereferenced: registration reflects over the class, it does not call anything.
+        // Never dereferenced: registration only reflects over the classes.
         assertDoesNotThrow(() -> {
             lamp.register(new Commands(null, null).registries().toArray());
             lamp.register(new ClickCommand(null));

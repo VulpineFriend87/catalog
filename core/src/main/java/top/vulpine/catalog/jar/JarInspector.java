@@ -18,7 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * Reads what a plugin jar declares about itself, without loading a single class from it.
+ * Reads what a plugin jar declares about itself without loading its classes.
  *
  * <p>Handles all three descriptors Catalog may meet: {@code plugin.yml}, {@code paper-plugin.yml}
  * and {@code velocity-plugin.json}.</p>
@@ -38,7 +38,7 @@ public final class JarInspector {
     /**
      * Inspects a jar.
      *
-     * <p>Never throws for a malformed or unreadable jar: an unreadable file simply yields {@link PluginDescriptor#unknown()}.</p>
+     * <p>Never throws. A jar that cannot be read gives {@link PluginDescriptor#unknown()}.</p>
      *
      * @param jar the file to inspect
      * @return what the jar declares
@@ -102,7 +102,7 @@ public final class JarInspector {
     }
 
     /**
-     * Pulls the handful of top-level scalars Catalog needs out of a plugin descriptor.
+     * Reads the top-level scalars Catalog needs from a YAML descriptor.
      */
     private static Declared readYamlDescriptor(ZipFile zip, ZipEntry entry, PluginDescriptor.Kind kind) {
 
@@ -115,7 +115,7 @@ public final class JarInspector {
 
             while ((line = reader.readLine()) != null) {
 
-                // Only column-zero keys are top level; anything indented belongs to a nested block.
+                // Only column-zero keys are top level.
                 if (line.isEmpty() || Character.isWhitespace(line.charAt(0))) {
                     continue;
                 }
@@ -160,7 +160,7 @@ public final class JarInspector {
 
             JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 
-            // The id is the identity Velocity enforces uniqueness on
+            // Velocity requires the id to be unique.
             String name = string(json, "id");
 
             if (name == null) {
@@ -192,7 +192,7 @@ public final class JarInspector {
     // Bytecode
 
     /**
-     * Finds the highest class file version in the jar, which is the lowest Java the server must run.
+     * Finds the highest class file version in the jar.
      */
     private static int readBytecodeMajor(ZipFile zip, String mainClass) {
 
@@ -223,8 +223,7 @@ public final class JarInspector {
                 continue;
             }
 
-            // Multi-release entries only load on JVMs new enough to ask for them, so a high-class
-            // version under here says nothing about whether the jar runs on this server.
+            // Multi-release entries only load on JVMs new enough for them.
             if (name.startsWith("META-INF/versions/")) {
                 continue;
             }

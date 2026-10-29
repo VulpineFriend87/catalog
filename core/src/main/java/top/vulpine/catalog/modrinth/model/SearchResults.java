@@ -21,7 +21,7 @@ public final class SearchResults {
     /**
      * The hits on this page.
      *
-     * @return the hits, never null
+     * @return the hits, or an empty list
      */
     public List<SearchHit> hits() {
         return hits == null ? Collections.emptyList() : hits;

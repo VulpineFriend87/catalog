@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Removing plugins, and putting them back.
+ * Uninstalls and restores plugins.
  */
 public final class Removals {
 
@@ -35,8 +35,8 @@ public final class Removals {
     /**
      * Deletes the jars that were locked when they were removed.
      *
-     * <p>Rather than {@link java.io.File#deleteOnExit()}, because a removal can be undone and
-     * {@code deleteOnExit} cannot be called off.</p>
+     * <p>Not {@link java.io.File#deleteOnExit()}. A removal can be undone and {@code deleteOnExit}
+     * cannot be called off.</p>
      */
     private final ExitTasks exitTasks;
 
@@ -57,8 +57,7 @@ public final class Removals {
      *
      * @param plugin the plugin to remove
      * @param by     who asked
-     * @return what was binned, which identifies this exact removal so it can be undone, or null
-     *         if there was no file to bin
+     * @return what was binned, or null if there was no file to bin
      */
     public TrashBin.Result uninstall(TrackedPlugin plugin, String by) throws TrackingException {
 
@@ -82,7 +81,7 @@ public final class Removals {
     }
 
     /**
-     * Drops a build staged for a plugin so the next restart does not put it back.
+     * Cancels the build staged for a removed plugin.
      *
      * @param plugin the plugin being removed
      * @return true if nothing is left staged
@@ -92,7 +91,7 @@ public final class Removals {
     }
 
     /**
-     * Everything currently in the trash, newest removal first.
+     * Everything currently in the trash. Newest first.
      */
     public List<TrashEntry> list() {
         return trash.list();
@@ -109,11 +108,11 @@ public final class Removals {
     }
 
     /**
-     * Puts a removed plugin back and starts tracking it again.
+     * Restores a removed plugin and tracks it again.
      *
      * @param entry what to restore
      * @param by    who asked
-     * @return the plugin Catalog is tracking again, or null if it was never tracked to begin with
+     * @return the plugin Catalog is tracking again, or null if it was never tracked
      * @throws InstallException if the jar is gone, or something already occupies its file name
      */
     public TrackedPlugin restore(TrashEntry entry, String by) throws TrackingException {
@@ -124,8 +123,7 @@ public final class Removals {
 
         Path target = platform.pluginsFolder().resolve(entry.fileName());
 
-        // A removal this server would not carry out left the jar exactly where it belongs, so
-        // undoing that one is a matter of calling the deletion off rather than copying anything.
+        // A locked jar was never moved. Undoing its removal calls the deletion off.
         if (exitTasks.withdraw(target)) {
             trash.discard(entry);
         } else {
@@ -136,12 +134,9 @@ public final class Removals {
     }
 
     /**
-     * Rebuilds the tracking record a restored plugin had, from what was written down when it was
-     * removed rather than from Modrinth: the version it was on may no longer be the newest, and by
-     * now may not even be listed.
+     * Rebuilds the tracking record a restored plugin had from what was saved at removal.
      *
-     * <p>Whether a restart is owed follows from when the removal happened, not from asking the
-     * server what is loaded: nothing is ever unloaded without one.</p>
+     * <p>Whether a restart is needed depends on when the removal happened.</p>
      */
     private TrackedPlugin track(TrashEntry entry, String by) throws TrackingException {
 
@@ -161,7 +156,7 @@ public final class Removals {
     }
 
     /**
-     * The record as it was removed, without its pending restart.
+     * The record as it was removed without its pending restart.
      */
     private static TrackedPlugin asRemoved(TrashEntry entry) {
 
@@ -228,8 +223,8 @@ public final class Removals {
     }
 
     /**
-     * Whether a removal happened while this server has been up, which is what decides if the plugin
-     * it took away is still loaded. Nothing is ever unloaded without a restart, so it is.
+     * Whether a removal happened while this server has been up. The plugin it took away is then
+     * still loaded.
      */
     private boolean removedWhileRunning(Instant removedAt) {
         return removedAt != null && !removedAt.isBefore(startedAt);
@@ -239,7 +234,7 @@ public final class Removals {
      * Claims a jar left in place because this server had it locked.
      *
      * @param jar the file being written over
-     * @return true if the pending deletion was called off, so the file may be reused
+     * @return true if the pending deletion was called off
      */
     public boolean claimPendingDelete(Path jar) {
         return exitTasks.withdraw(jar);
@@ -260,7 +255,7 @@ public final class Removals {
      * Deletes every removal permanently.
      *
      * @param by who asked
-     * @return how many went
+     * @return how many were deleted
      */
     public int empty(String by) {
 
@@ -293,8 +288,8 @@ public final class Removals {
     /**
      * Where a staged build is sitting.
      *
-     * <p>Falls back to the installed name for records written before builds were staged under the
-     * name their author published, so an update queued by an older version is still found.</p>
+     * <p>Falls back to the installed name for records from before builds were staged under their
+     * published name.</p>
      *
      * @param plugin the plugin to look up
      * @return the file name a staged build would have

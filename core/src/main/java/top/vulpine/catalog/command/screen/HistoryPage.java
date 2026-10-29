@@ -4,7 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
+import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.history.Event;
 import top.vulpine.catalog.history.HistoryEntry;
@@ -26,31 +26,30 @@ import static top.vulpine.catalog.command.screen.widget.Widgets.*;
  */
 public final class HistoryPage {
 
-    /** How many entries one page of the history shows. */
-    private static final int EVENTS = 12;
+    /** How many lines the entries and day headings of one page take at most. */
+    private static final int BODY = 14;
 
     private HistoryPage() {
     }
 
     /**
-     * What Catalog did, grouped by the day it happened.
+     * What Catalog did grouped by day.
      *
-     * @param entries what to show, newest first
-     * @param page    which page, from one
-     * @param filter  what the list was narrowed to, shown in the header, or null when it was not
-     * @param command the command that produced this list, which the pager adds a page to
+     * @param entries what to show sorted newest first
+     * @param page    the page number starting at one
+     * @param filter  what the header says the list was narrowed to, or null when it was not
+     * @param command the command the pager adds {@code --page} to
      */
     public static List<Component> history(List<HistoryEntry> entries, int page, String filter,
                                           String command) {
 
-        int pages = Math.max((entries.size() + EVENTS - 1) / EVENTS, 1);
-        int shown = Math.min(Math.max(page, 1), pages);
-        int first = (shown - 1) * EVENTS;
+        List<List<HistoryEntry>> pages = paged(entries);
+        Pager pager = Pager.at(page, pages.size());
 
         List<Component> out = new ArrayList<>();
 
         TextComponent.Builder header = line()
-                .append(Component.text("Catalog", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Catalog", BRAND))
                 .append(Component.text("  history", MUTED));
 
         out.add(header.build());
@@ -67,7 +66,7 @@ public final class HistoryPage {
 
         LocalDate day = null;
 
-        for (HistoryEntry entry : entries.subList(first, Math.min(first + EVENTS, entries.size()))) {
+        for (HistoryEntry entry : pages.get(pager.shown() - 1)) {
 
             LocalDate on = LocalDate.ofInstant(entry.at(), ZoneId.systemDefault());
 
@@ -82,26 +81,41 @@ public final class HistoryPage {
 
         out.add(Component.empty());
 
-        TextComponent.Builder footer = line()
-                .append(Component.text(INDENT + "page ", MUTED))
-                .append(Component.text(shown, TEXT))
-                .append(Component.text(" of " + pages + "  ", MUTED));
-
-        if (shown > 1) {
-            footer.append(button("Newer", command + " --page " + (shown - 1), MUTED,
-                    "Page " + (shown - 1))).append(Component.space());
-        }
-
-        if (shown < pages) {
-            footer.append(button("Older", command + " --page " + (shown + 1), MUTED,
-                    "Page " + (shown + 1))).append(Component.space());
-        }
-
-        footer.append(button("Plugins", "/catalog list", MUTED, "Back to the plugin list"));
-
-        out.add(footer.build());
+        out.add(pager.footer(List.of(button("Plugins", "/catalog list", MUTED, "Back to the plugin list")),
+                "Newer", "Older", shown -> command + " --page " + shown));
 
         return out;
+    }
+
+    /**
+     * Splits the entries into pages of at most {@link #BODY} lines. A day heading takes two.
+     */
+    private static List<List<HistoryEntry>> paged(List<HistoryEntry> entries) {
+
+        List<List<HistoryEntry>> pages = new ArrayList<>();
+        List<HistoryEntry> current = new ArrayList<>();
+        LocalDate day = null;
+        int lines = 0;
+
+        for (HistoryEntry entry : entries) {
+
+            LocalDate on = LocalDate.ofInstant(entry.at(), ZoneId.systemDefault());
+            int needed = on.equals(day) ? 1 : 3;
+
+            if (!current.isEmpty() && lines + needed > BODY) {
+                pages.add(current);
+                current = new ArrayList<>();
+                lines = 0;
+                needed = 3;
+            }
+
+            current.add(entry);
+            lines += needed;
+            day = on;
+        }
+
+        pages.add(current);
+        return pages;
     }
 
     private static String dayName(LocalDate on) {
@@ -131,8 +145,7 @@ public final class HistoryPage {
 
         Component detail = historyDetail(entry);
 
-        // A row narrows the list to its own plugin, which is how the filter is found without a
-        // button for it anywhere.
+        // A row narrows the list to its own plugin.
         if (entry.slug() == null) {
             return row.hoverEvent(HoverEvent.showText(detail)).build();
         }
@@ -141,8 +154,8 @@ public final class HistoryPage {
     }
 
     /**
-     * What an event reads as: red for something gone, amber for something owed, green for something
-     * that landed.
+     * The colour of an event: {@code DONE} when applied, {@code PENDING} when it needs a restart or
+     * attention, {@code DANGER} when removed.
      */
     private static TextColor colourOf(Event event) {
 
@@ -158,7 +171,7 @@ public final class HistoryPage {
     }
 
     /**
-     * The sentence a row shows, which states the fact and leaves the rest to the hover.
+     * The sentence a row shows.
      */
     private static String said(HistoryEntry entry) {
 
@@ -246,8 +259,7 @@ public final class HistoryPage {
 
         hover.append(Component.newline()).append(Component.newline());
 
-        // The restart applied it, so there is nobody to name. Whoever queued it is on the row
-        // that queued it.
+        // Applied by the restart. Whoever queued it is on the row that queued it.
         if (entry.event() != Event.UPDATES_APPLIED) {
             hover.append(Component.text(entry.byPerson() ? "by " + entry.by() : "by Catalog", TEXT))
                     .append(Component.newline());

@@ -13,12 +13,11 @@ import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
 /**
- * What a screen shows to a viewer, given the commands they may run.
+ * Shapes a screen for the commands a viewer may run.
  *
- * <p>A screen is built once for everyone. Its buttons carry their command in their insertion, its
- * clickable rows are made with {@link #link}, and anything that reads differently to a viewer who
- * cannot act on it is declared with {@link #unless}. {@link #filter} then shapes the screen for one
- * viewer. A click event is never read back: Adventure 5 changed it incompatibly.</p>
+ * <p>Buttons carry their command in their insertion. Clickable rows are made with {@link #link}.
+ * What a viewer who cannot act sees instead is declared with {@link #unless}. Click events are
+ * never read back: Adventure 5 changed them incompatibly.</p>
  */
 public final class Permitted {
 
@@ -62,8 +61,8 @@ public final class Permitted {
     }
 
     /**
-     * Shapes a screen for one viewer: swaps what is declared with {@link #unless}, removes the
-     * buttons they cannot use and the click from rows they cannot act on.
+     * Swaps what is declared with {@link #unless} and removes the buttons and clicks the viewer
+     * cannot use.
      *
      * @param allowed whether the viewer may run a command
      * @return the screen for them, or null when the component itself is a button they cannot use

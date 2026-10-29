@@ -24,19 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Exercises {@link ModrinthClient} against the live Modrinth API.
  *
- * <p>Excluded from the normal build because it needs network access and depends on a third party
- * staying up. Run it with {@code gradlew :core:integrationTest} whenever the client or the models
- * change.</p>
+ * <p>Excluded from the normal build. Run it with {@code gradlew :core:integrationTest} when the
+ * client or the models change.</p>
  *
- * <p>Field binding is the thing most worth checking here. A misspelled field silently deserialises
- * to null rather than failing, so the assertions below deliberately reach into every field Catalog
- * actually depends on.</p>
+ * <p>A misspelled field deserialises to null. The assertions read every field Catalog uses.</p>
  */
 @Tag("integration")
 @DisplayName("ModrinthClient against the live API")
 class ModrinthClientIntegrationTest {
 
-    /** A small, stable plugin that publishes releases only — used as a known-good fixture. */
+    /** A plugin that publishes releases only. */
     private static final String FIXTURE_SLUG = "simplelobby";
 
     private static ModrinthClient client;
@@ -131,8 +128,7 @@ class ModrinthClientIntegrationTest {
         ModrinthVersion oldest = versions.get(versions.size() - 1);
         String hash = oldest.primaryFile().sha512();
 
-        // The fixture publishes releases only, so asking for alphas alone must find nothing.
-        // This is what lets a whole-server check cost one request regardless of channel.
+        // The fixture publishes releases only. Asking for alphas alone finds nothing.
         Map<String, ModrinthVersion> alphasOnly = client.latest(
                 List.of(hash),
                 List.of("paper"),

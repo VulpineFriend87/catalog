@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("GameVersions")
 class GameVersionsTest {
 
-    /** What Modrinth knew on 2026-10-26, newest first, trimmed to what the tests need. */
+    /** What Modrinth knew on 2026-10-26. Newest first. Trimmed to what the tests need. */
     private static final GameVersions KNOWN = new GameVersions(tags(
             "26.4-snapshot-5:snapshot", "26.4-snapshot-4:snapshot",
             "26.3", "26.3-pre-1:snapshot", "26.2", "26.1.2", "26.1.1", "26.1",

@@ -16,7 +16,7 @@ import top.vulpine.catalog.command.service.Screens;
 import top.vulpine.catalog.platform.Viewer;
 
 /**
- * A project's page and what its builds declare.
+ * {@code /catalog info} and {@code dependencies}.
  */
 public final class InfoCommand implements OrphanCommand {
 

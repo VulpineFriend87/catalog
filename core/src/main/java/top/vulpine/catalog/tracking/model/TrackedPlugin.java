@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * One plugin Catalog manages, and everything it remembers about it.
+ * A tracked plugin.
  *
  * <p>Serialized to {@code tracked.json}.</p>
  */
@@ -30,41 +30,42 @@ public final class TrackedPlugin {
     private String versionNumber;
     private Instant datePublished;
 
-    /** The build the last update replaced, which a rollback returns to. */
+    /** The build the last update replaced. A rollback returns to it. */
     private String previousVersionId;
     private String previousVersionNumber;
     private Instant previousPublished;
 
-    /** The file in {@code plugins/} as it is named right now, canonical once adopted. */
+    /** The file in {@code plugins/} as it is named right now. */
     private String fileName;
 
-    /** The canonical name still to be applied, when the rename had to wait for shutdown. */
+    /** The canonical name still to be applied after a rename that waits for shutdown. */
     private String pendingRenameTo;
 
-    /** Set once an update is staged, cleared after the restart that applied it is verified. */
+    /** Set when an update is staged. Cleared once the restart that applied it is verified. */
     private boolean pendingRestart;
 
     /**
-     * What the staged build is called inside the update folder, while one is waiting.
+     * What the waiting staged build is called inside the update folder.
      */
     private String stagedAs;
 
     /**
-     * Which build is staged, so a picker can mark it while the installed one is still running.
+     * Which build is staged.
      */
     private String stagedVersionId;
     private String stagedVersionNumber;
 
-    /** When the staged build was published, which a newer build is compared against. */
+    /** When the staged build was published. A newer build is compared against it. */
     private Instant stagedPublished;
 
     /**
-     * Who queued the staged build, read by the restart that applies it. Absent means Catalog did.
+     * Who queued the staged build. Absent means Catalog did.
      */
     private String stagedBy;
 
     /**
-     * Set when Catalog wrote this jar straight into the plugins folder and cleared by the first startup that sees it.
+     * Set when Catalog wrote this jar into the plugins folder. Cleared by the first startup that
+     * sees it.
      */
     private boolean pendingLoad;
 
@@ -76,7 +77,7 @@ public final class TrackedPlugin {
 
     private int soakMinutes = INHERIT_SOAK;
 
-    /** Non-null freezes this plugin to exactly that version, against manual updates too. */
+    /** Holds this plugin at that version when set. Manual updates are refused too. */
     private String pinnedVersionId;
 
     /** File name to destination directory for versions that ship more than the plugin jar. */
@@ -86,8 +87,7 @@ public final class TrackedPlugin {
     private Instant installedAt;
 
     /**
-     * False when this was pulled in to satisfy someone else's requirement, which is what lets
-     * {@code autoremove} offer it once nothing needs it anymore.
+     * False when this was installed for another plugin's requirement.
      */
     private boolean explicit = true;
 
@@ -98,7 +98,7 @@ public final class TrackedPlugin {
      * @param fileName  the name of that file in the plugins folder
      * @param sha512    its hash
      * @param channel   the channel this plugin should follow from now on
-     * @param installedBy who to record in the audit log
+     * @param installedBy who to record in the history
      * @return a new record with the defaults applied
      */
     public static TrackedPlugin of(ModrinthVersion version, String fileName, String sha512,
@@ -159,7 +159,7 @@ public final class TrackedPlugin {
     }
 
     /**
-     * Whether this plugin is frozen to a specific version.
+     * Whether this plugin is held at one version.
      *
      * @return true if a pin is set
      */
@@ -168,19 +168,16 @@ public final class TrackedPlugin {
     }
 
     /**
-     * Freezes this plugin to whatever is installed right now.
-     *
-     * <p>Resolved to the concrete version immediately rather than stored as "current", so the pin
-     * cannot quietly drift if the file is replaced by hand.</p>
+     * Holds this plugin at the installed version.
      */
     public void pinToCurrent() {
         this.pinnedVersionId = versionId;
     }
 
     /**
-     * The display name for messages, falling back through what is known.
+     * The display name for messages.
      *
-     * @return the friendliest available name
+     * @return the name, else the slug, else the project id
      */
     public String displayName() {
 

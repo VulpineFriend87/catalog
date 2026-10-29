@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * What {@code /catalog list} can be narrowed to, named after the label each row already shows.
+ * What {@code /catalog list} can be narrowed to.
  */
 public enum ListFilter {
 
@@ -23,7 +23,7 @@ public enum ListFilter {
 
     /**
      * @param plugin  a managed plugin
-     * @param updates what is available, keyed by project id
+     * @param updates the open updates by project id
      * @return whether this filter keeps it
      */
     public boolean keeps(TrackedPlugin plugin, Map<String, UpdateCandidate> updates) {
@@ -36,7 +36,7 @@ public enum ListFilter {
     }
 
     /**
-     * Several filters keep whatever any one of them keeps, and none keeps everything.
+     * Keeps a plugin when any filter keeps it. No filters keep every plugin.
      */
     public static boolean keeps(Set<ListFilter> filters, TrackedPlugin plugin,
                                 Map<String, UpdateCandidate> updates) {
@@ -59,7 +59,7 @@ public enum ListFilter {
     }
 
     /**
-     * @return the switches that reproduce these filters, each with a leading space
+     * @return the switches for these filters with a leading space each
      */
     public static String switches(Set<ListFilter> filters) {
 

@@ -2,6 +2,7 @@ package top.vulpine.catalog.command.service;
 
 import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.screen.Change;
@@ -19,7 +20,6 @@ import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +28,7 @@ import java.util.Set;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * Everything that puts a build on the server: install, update, switch and roll back.
+ * Install, update, switch and roll back.
  */
 public final class Installs {
 
@@ -158,7 +158,7 @@ public final class Installs {
                             needed.stream().map(one -> one.project().title()).toList()));
 
         } catch (Exception e) {
-            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Errors.rootMessage(e)));
         }
     }
 
@@ -220,7 +220,7 @@ public final class Installs {
             send(viewer, Outcomes.staged(tracked.displayName(), candidate.to()));
 
         } catch (Exception e) {
-            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Errors.rootMessage(e)));
         }
     }
 
@@ -257,10 +257,9 @@ public final class Installs {
                         catalog.stage(candidate, viewer.name());
                         staged++;
                     } catch (Exception e) {
-                        // One plugin failing is not a reason to abandon the rest of the queue, and
-                        // the reason is worth more after the list than buried above it.
+                        // One failure does not stop the rest. Its reason is sent after the list.
                         failures.add(Outcomes.stageFailed(candidate.plugin().displayName(),
-                                Chat.rootMessage(e)));
+                                Errors.rootMessage(e)));
                     }
                 }
 
@@ -275,7 +274,7 @@ public final class Installs {
                 }
 
             } catch (Exception e) {
-                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Errors.rootMessage(e)));
             }
         });
     }
@@ -286,7 +285,13 @@ public final class Installs {
     private List<Installer.Pending> pendingFor(List<DependencyResolver.Requirement> missing,
                                                   ModrinthProject root) {
 
-        Map<String, ModrinthProject> projects = projectsFor(missing);
+        Set<String> ids = new LinkedHashSet<>();
+
+        for (DependencyResolver.Requirement requirement : missing) {
+            ids.add(requirement.projectId());
+        }
+
+        Map<String, ModrinthProject> projects = catalog.projects(ids);
         List<Installer.Pending> pending = new ArrayList<>();
 
         for (DependencyResolver.Requirement requirement : missing) {
@@ -307,38 +312,8 @@ public final class Installs {
         return pending;
     }
 
-    private Map<String, ModrinthProject> projectsFor(List<DependencyResolver.Requirement> requirements) {
-
-        Set<String> ids = new LinkedHashSet<>();
-
-        for (DependencyResolver.Requirement requirement : requirements) {
-            ids.add(requirement.projectId());
-        }
-
-        return byId(ids);
-    }
-
-    private Map<String, ModrinthProject> byId(Set<String> ids) {
-
-        Map<String, ModrinthProject> projects = new HashMap<>();
-
-        if (ids.isEmpty()) {
-            return projects;
-        }
-
-        try {
-            for (ModrinthProject project : catalog.getModrinth().projects(ids).join()) {
-                projects.put(project.id(), project);
-            }
-        } catch (Exception ignored) {
-            // The ids are still enough to name and act on a row.
-        }
-
-        return projects;
-    }
-
     /**
-     * The update offered for a plugin checked again if the cache doesn't have it.
+     * The update offered for a plugin. Checks again when the cache has none.
      */
     private UpdateCandidate candidateFor(TrackedPlugin tracked) {
 

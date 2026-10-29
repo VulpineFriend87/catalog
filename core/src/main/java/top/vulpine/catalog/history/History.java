@@ -11,7 +11,6 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,8 +20,7 @@ import java.util.Locale;
 /**
  * Reads and writes {@code history.json}.
  *
- * <p>Newest first, capped, and never allowed to fail an action: a record of what happened is not
- * worth refusing to do the thing it would have recorded.</p>
+ * <p>Newest first and capped. A failed write never fails an action.</p>
  */
 public final class History {
 
@@ -40,7 +38,7 @@ public final class History {
     }
 
     /**
-     * Loads the file into memory, replacing anything already held.
+     * Loads the file. Replaces what is held.
      */
     public void load() {
 
@@ -83,10 +81,9 @@ public final class History {
     }
 
     /**
-     * Writes one event down.
+     * Records one event.
      *
-     * <p>Failing to record is reported and then dropped. The action it describes has already
-     * happened, and undoing it because a log file would not write is worse than losing the line.</p>
+     * <p>A failed write is logged and dropped.</p>
      *
      * @param entry what happened
      */
@@ -110,7 +107,7 @@ public final class History {
     }
 
     /**
-     * Everything recorded, newest first.
+     * Everything recorded. Newest first.
      */
     public List<HistoryEntry> all() {
 
@@ -120,10 +117,11 @@ public final class History {
     }
 
     /**
-     * The entries matching both filters, newest first.
+     * The entries matching both filters. Newest first.
      *
      * @param projectId only this plugin, or null for every plugin
-     * @param by        only this author, or null for everyone; "catalog" means what it did alone
+     * @param by        only this author, or null for everyone. "catalog" is what Catalog did
+     *                  automatically.
      * @return the matching entries
      */
     public List<HistoryEntry> filter(String projectId, String by) {
@@ -156,10 +154,9 @@ public final class History {
     }
 
     /**
-     * The project a name, slug or id refers to, among the plugins this log mentions.
+     * The project a name, slug or id refers to among the plugins this log mentions.
      *
-     * <p>Looked up here rather than in the tracking file, because the most interesting thing to
-     * filter on is often a plugin that is no longer installed.</p>
+     * <p>Finds plugins that are no longer installed.</p>
      *
      * @param query what was typed
      * @return the project id, or null when the log has never mentioned it
@@ -170,7 +167,7 @@ public final class History {
             return null;
         }
 
-        String wanted = query.trim().toLowerCase(Locale.ROOT);
+        String wanted = query.trim();
 
         for (HistoryEntry entry : all()) {
 
@@ -178,8 +175,8 @@ public final class History {
                 continue;
             }
 
-            if (matches(entry.name(), wanted) || matches(entry.slug(), wanted)
-                    || matches(entry.projectId(), wanted)) {
+            if (wanted.equalsIgnoreCase(entry.name()) || wanted.equalsIgnoreCase(entry.slug())
+                    || wanted.equalsIgnoreCase(entry.projectId())) {
                 return entry.projectId();
             }
         }
@@ -188,7 +185,7 @@ public final class History {
     }
 
     /**
-     * Every plugin this log mentions, newest first, for tab completion.
+     * Every plugin this log mentions. Newest first.
      */
     public List<String> plugins() {
 
@@ -206,10 +203,6 @@ public final class History {
         return names;
     }
 
-    private static boolean matches(String value, String wanted) {
-        return value != null && value.toLowerCase(Locale.ROOT).equals(wanted);
-    }
-
     /**
      * @return when the oldest kept entry happened, or null when there are none
      */
@@ -221,11 +214,7 @@ public final class History {
 
     private void save() throws IOException {
 
-        Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-
-        Files.createDirectories(file.getParent());
-        Files.writeString(temporary, Json.gson().toJson(all(), ENTRY_LIST), StandardCharsets.UTF_8);
-        Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+        Json.write(file, all(), ENTRY_LIST);
     }
 
 }

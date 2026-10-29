@@ -6,7 +6,7 @@ import lombok.experimental.Accessors;
 import java.nio.file.Path;
 
 /**
- * One jar found in the plugins folder, hashed and inspected.
+ * One hashed and inspected jar in the plugins folder.
  */
 @Getter
 @Accessors(fluent = true)

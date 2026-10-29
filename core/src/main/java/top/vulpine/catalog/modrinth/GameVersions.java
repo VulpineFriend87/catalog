@@ -13,15 +13,15 @@ import java.util.Set;
 /**
  * Writes the Minecraft versions a build declares as short ranges.
  *
- * <p>{@code 1.8.9–26.3} for an unbroken stretch of releases, {@code 1.21.x} when it is every
- * release of one minor version, the newest snapshot first.</p>
+ * <p>{@code 1.8.9–26.3} is an unbroken stretch of releases. {@code 1.21.x} is every release of
+ * one minor version. The newest snapshot goes first.</p>
  */
 public final class GameVersions {
 
-    /** Every version Modrinth knows, newest first. */
+    /** Every version Modrinth knows. Newest first. */
     private final List<GameVersionTag> known;
 
-    /** Every release Modrinth knows, newest first. */
+    /** Every release Modrinth knows. Newest first. */
     private final List<String> releases = new ArrayList<>();
 
     /** How many releases each minor version has. */
@@ -40,7 +40,7 @@ public final class GameVersions {
     }
 
     /**
-     * @return the versions joined with a comma, or the declared list as it is when nothing is known
+     * @return the versions joined with a comma, or the declared list when Modrinth knows none of them
      */
     public String describe(Collection<String> declared) {
 
@@ -52,7 +52,7 @@ public final class GameVersions {
         Set<String> placed = new HashSet<>(releases);
         List<String> out = new ArrayList<>();
 
-        // The newest version declared, when it is not a release.
+        // The newest version declared if it is not a release.
         for (GameVersionTag tag : known) {
 
             if (!wanted.contains(tag.version())) {
@@ -86,7 +86,7 @@ public final class GameVersions {
     }
 
     /**
-     * @param run releases with nothing missing between them, newest first
+     * @param run consecutive declared releases sorted newest first
      */
     private String name(List<String> run) {
 
@@ -105,7 +105,7 @@ public final class GameVersions {
     }
 
     /**
-     * The unbroken stretches of releases that are declared, newest first.
+     * The unbroken stretches of declared releases. Newest first.
      */
     private List<List<String>> runs(Set<String> wanted) {
 

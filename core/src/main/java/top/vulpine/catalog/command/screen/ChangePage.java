@@ -2,7 +2,6 @@ package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.screen.Change;
@@ -30,7 +29,7 @@ public final class ChangePage {
      * @param from     the version installed now, or null for a first install
      * @param replaces the build already downloaded, or null when there is none
      * @param notFor   the Minecraft version the build does not declare, or null when it does
-     * @param needs    the required plugins that are missing, and the conflicts
+     * @param needs    the missing required plugins and the conflicts
      * @param asked    the press that raised the question
      * @param here     this screen
      * @param command  what confirming runs
@@ -43,8 +42,8 @@ public final class ChangePage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text(change.verb() + " ", PENDING).decorate(TextDecoration.BOLD))
-                .append(Component.text(name, TEXT).decorate(TextDecoration.BOLD))
+                .append(title(change.verb() + " ", PENDING))
+                .append(title(name, TEXT))
                 .build());
 
         TextComponent.Builder builds = line().append(Component.text(INDENT));

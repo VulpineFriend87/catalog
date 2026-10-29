@@ -37,7 +37,7 @@ public final class TrackingStore {
     }
 
     /**
-     * Loads the file into memory, replacing anything already held.
+     * Loads the file. Replaces what is held.
      *
      * @throws TrackingException if the file exists but cannot be read or parsed
      */
@@ -78,7 +78,7 @@ public final class TrackingStore {
 
         for (TrackedPlugin entry : entries) {
 
-            // A record with no project id cannot be looked up or updated, so it is not usable state.
+            // A record with no project id cannot be looked up or updated.
             if (entry != null && entry.projectId() != null) {
                 plugins.put(entry.projectId(), entry);
             }
@@ -88,26 +88,21 @@ public final class TrackingStore {
     /**
      * Writes the store to disk.
      *
-     * <p>Written to a temporary file and moved into place. A crash midway through would otherwise
-     * leave truncated JSON, which the next load would refuse.</p>
+     * <p>Written to a temporary file and moved into place.</p>
      *
      * @throws TrackingException if the file cannot be written
      */
     public void save() {
 
-        Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-
         try {
-            Files.createDirectories(file.getParent());
-            Files.writeString(temporary, Json.gson().toJson(all(), ENTRY_LIST), StandardCharsets.UTF_8);
-            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            Json.write(file, all(), ENTRY_LIST);
         } catch (IOException e) {
             throw new TrackingException("Could not write " + file.getFileName(), e);
         }
     }
 
     /**
-     * Every tracked plugin, in insertion order.
+     * Every tracked plugin in insertion order.
      *
      * @return the tracked plugins
      */

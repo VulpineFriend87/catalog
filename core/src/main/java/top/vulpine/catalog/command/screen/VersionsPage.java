@@ -4,7 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.TextDecoration;
+import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.modrinth.GameVersions;
@@ -41,23 +41,8 @@ public final class VersionsPage {
                                            TrackedPlugin installed, boolean untracked,
                                            boolean incompatible, String from) {
 
-        List<Component> out = new ArrayList<>();
-
-        out.add(line()
-                .append(Component.text(project.title(), BRAND).decorate(TextDecoration.BOLD))
-                .append(Component.text(incompatible ? "  newest" : "  newest for " + gameVersion, MUTED))
-                .build());
-
-        if (incompatible) {
-            out.add(Component.text(INDENT + "Any Minecraft version. Most will not load.", PENDING));
-        }
-
-        out.add(Component.empty());
-
-        if (newest.isEmpty()) {
-            out.add(Component.text(INDENT + (incompatible ? "This project has published nothing"
-                    : "No build for this server"), MUTED));
-        }
+        List<Component> out = head(project, incompatible ? "newest" : "newest for " + gameVersion,
+                incompatible, newest.isEmpty());
 
         for (ReleaseChannel channel : ReleaseChannel.values()) {
 
@@ -83,7 +68,7 @@ public final class VersionsPage {
     }
 
     /**
-     * Every build of a project, newest first.
+     * Every build of a project. Newest first.
      *
      * @param untracked    whether the project's jar is in the plugins folder but untracked
      * @param incompatible whether builds for other Minecraft versions are included
@@ -94,16 +79,40 @@ public final class VersionsPage {
                                               String gameVersion, GameVersions names,
                                               boolean incompatible, int page, String from) {
 
-        int pages = Math.max((versions.size() + EVERY - 1) / EVERY, 1);
-        int shown = Math.min(Math.max(page, 1), pages);
-        int first = (shown - 1) * EVERY;
+        Pager pager = Pager.of(versions.size(), EVERY, page);
+
+        List<Component> out = head(project,
+                versions.size() + " builds" + (incompatible ? "" : " for " + gameVersion),
+                incompatible, versions.isEmpty());
+
+        for (ModrinthVersion version : pager.slice(versions)) {
+            out.add(versionRow(project, version, false, installed, untracked, gameVersion, names, from));
+        }
+
+        out.add(Component.empty());
+
+        String newest = from("/catalog versions " + project.slug()
+                + (incompatible ? " --incompatible" : ""), from);
+
+        out.add(pager.footer(List.of(button("Back", newest, MUTED, "The newest release, beta and alpha")),
+                "Newer", "Older", shown -> from(allPage(project, incompatible, shown), from)));
+
+        return out;
+    }
+
+    /**
+     * The title of a builds screen and the notices under it.
+     *
+     * @param empty whether there are no builds to list
+     */
+    private static List<Component> head(ModrinthProject project, String subtitle, boolean incompatible,
+                                        boolean empty) {
 
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text(project.title(), BRAND).decorate(TextDecoration.BOLD))
-                .append(Component.text("  " + versions.size() + " builds"
-                        + (incompatible ? "" : " for " + gameVersion), MUTED))
+                .append(title(project.title(), BRAND))
+                .append(Component.text("  " + subtitle, MUTED))
                 .build());
 
         if (incompatible) {
@@ -112,36 +121,10 @@ public final class VersionsPage {
 
         out.add(Component.empty());
 
-        if (versions.isEmpty()) {
+        if (empty) {
             out.add(Component.text(INDENT + (incompatible ? "This project has published nothing"
                     : "No build for this server"), MUTED));
         }
-
-        for (ModrinthVersion version : versions.subList(first, Math.min(first + EVERY, versions.size()))) {
-            out.add(versionRow(project, version, false, installed, untracked, gameVersion, names, from));
-        }
-
-        out.add(Component.empty());
-
-        TextComponent.Builder footer = line()
-                .append(Component.text(INDENT + "page ", MUTED))
-                .append(Component.text(shown, TEXT))
-                .append(Component.text(" of " + pages + "  ", MUTED));
-
-        if (shown > 1) {
-            footer.append(button("Newer", from(allPage(project, incompatible, shown - 1), from), MUTED,
-                    "Page " + (shown - 1))).append(Component.space());
-        }
-
-        if (shown < pages) {
-            footer.append(button("Older", from(allPage(project, incompatible, shown + 1), from), MUTED,
-                    "Page " + (shown + 1))).append(Component.space());
-        }
-
-        footer.append(button("Newest", from("/catalog versions " + project.slug()
-                + (incompatible ? " --incompatible" : ""), from), MUTED, "The newest release, beta and alpha"));
-
-        out.add(footer.build());
 
         return out;
     }
@@ -155,7 +138,7 @@ public final class VersionsPage {
     private static final int EVERY = 12;
 
     /**
-     * @param channelFirst whether the channel leads the row, as in the newest of each channel
+     * @param channelFirst whether the row starts with the channel
      */
     private static Component versionRow(ModrinthProject project, ModrinthVersion version,
                                         boolean channelFirst, TrackedPlugin installed,
@@ -209,7 +192,7 @@ public final class VersionsPage {
         // Choosing a build returns to the screen the list was opened from.
         String here = from != null ? from : new Screen.InfoScreen(project.slug()).token();
 
-        // While a build is waiting, the installed row is the way back out of it.
+        // While a build is waiting the installed row cancels it.
         String command = staged ? null
                 : current && waiting ? from("/catalog cancel " + project.slug(), here)
                 : current || untracked ? null

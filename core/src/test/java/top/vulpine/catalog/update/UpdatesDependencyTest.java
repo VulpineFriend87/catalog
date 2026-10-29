@@ -33,7 +33,7 @@ class UpdatesDependencyTest {
     private TrackingStore store;
 
     /**
-     * A server that records rather than writes, so nothing here touches a plugins folder.
+     * A server that records what it is asked to write.
      */
     private final class Recording implements Platform {
 
@@ -139,7 +139,7 @@ class UpdatesDependencyTest {
 
     private Updates updates(DependencyResolver.Resolution resolution) {
         return new Updates(new Recording(), null, store, null, () -> 0, version -> resolution,
-                history(), () -> true);
+                missing -> missing, history(), () -> true);
     }
 
     private static DependencyResolver.Resolution needing(String projectId, boolean installed) {
@@ -151,8 +151,7 @@ class UpdatesDependencyTest {
     }
 
     /**
-     * Versions are bound from JSON rather than constructed, since they exist to be read from the
-     * API and have no public constructor.
+     * Versions are bound from JSON. They have no public constructor.
      */
     private static ModrinthVersion version() {
         return Json.gson().fromJson(
@@ -197,7 +196,7 @@ class UpdatesDependencyTest {
         Updates failing = new Updates(new Recording(), null, store, null, () -> 0,
                 version -> {
                     throw new IllegalStateException("no network");
-                }, history(), () -> true);
+                }, missing -> missing, history(), () -> true);
 
         assertTrue(failing.missingFor(version()).isEmpty());
     }

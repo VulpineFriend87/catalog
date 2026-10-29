@@ -13,10 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Checks, once the server has started, that every plugin this start updated or installed is enabled.
+ * Checks that every plugin this start updated or installed is enabled.
  *
- * <p>Runs when both the server has finished starting and Catalog's first scan has finished, in
- * whichever order they arrive.</p>
+ * <p>Runs once both the server and Catalog's first scan have finished.</p>
  */
 public final class EnableCheck {
 
@@ -51,7 +50,7 @@ public final class EnableCheck {
     public record Failure(TrackedPlugin plugin, boolean updated, String reason, boolean previousRemoved) {
 
         /**
-         * @return whether a rollback can be offered at all
+         * @return whether a rollback can be offered
          */
         public boolean canRollBack() {
             return updated && plugin.canRollBack();
@@ -156,7 +155,7 @@ public final class EnableCheck {
     }
 
     /**
-     * @return true only when Modrinth says the build no longer exists, never on a network error
+     * @return true only when Modrinth answers that the build does not exist
      */
     private boolean removed(String versionId) {
 

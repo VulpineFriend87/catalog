@@ -1,8 +1,7 @@
 package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.TextDecoration;
+import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.modrinth.model.SearchHit;
 import top.vulpine.catalog.modrinth.model.SearchResults;
@@ -32,7 +31,7 @@ public final class SearchPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Search", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Search", BRAND))
                 .append(Component.text("  " + query, TEXT))
                 .append(Component.text("  " + results.totalHits() + " results", MUTED))
                 .build());
@@ -48,26 +47,13 @@ public final class SearchPage {
             out.add(hit(hit, installedProjects.contains(hit.projectId())));
         }
 
-        int pages = Math.max((results.totalHits() + PAGE - 1) / PAGE, 1);
+        Pager pager = Pager.of(results.totalHits(), PAGE, page);
 
-        out.add(Component.empty());
-
-        TextComponent.Builder footer = line()
-                .append(Component.text(INDENT + "page ", MUTED))
-                .append(Component.text(page, TEXT))
-                .append(Component.text(" of " + pages + "  ", MUTED));
-
-        if (page > 1) {
-            footer.append(button("Back", "/catalog search " + query + " --page " + (page - 1),
-                    MUTED, "Page " + (page - 1))).append(Component.space());
+        if (pager.pages() > 1) {
+            out.add(Component.empty());
+            out.add(pager.footer(List.of(), "Previous", "Next",
+                    shown -> "/catalog search " + query + " --page " + shown));
         }
-
-        if (results.hasMore()) {
-            footer.append(button("Next", "/catalog search " + query + " --page " + (page + 1),
-                    BRAND, "Page " + (page + 1)));
-        }
-
-        out.add(footer.build());
 
         return out;
     }

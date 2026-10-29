@@ -11,7 +11,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Builds small jars on disk so the index can be tested without shipping binary fixtures.
+ * Builds small jars on disk for the tests.
  */
 final class TestJars {
 
@@ -42,8 +42,7 @@ final class TestJars {
         /**
          * Adds a class file whose header declares the given major version.
          *
-         * <p>Only the eight-byte header matters: the inspector reads the magic number and version
-         * and never looks further, so there is no need to synthesise a loadable class.</p>
+         * <p>Only the eight-byte header is written. The inspector reads nothing past it.</p>
          */
         Builder classFile(String path, int major) {
 

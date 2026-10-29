@@ -7,10 +7,10 @@ import top.vulpine.catalog.command.permission.CommandPermissions;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 
 /**
- * The command every button in chat actually runs.
+ * The {@code /catalog-do} command every button runs.
  *
- * <p>It needs any command node. What it dispatches runs as whoever pressed the button and is
- * checked like any other command.</p>
+ * <p>It needs any command node. What it dispatches runs as whoever pressed the button. Its
+ * permission is checked as usual.</p>
  */
 public final class ClickCommand {
 

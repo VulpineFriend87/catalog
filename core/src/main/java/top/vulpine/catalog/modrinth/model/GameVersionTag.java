@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 
 /**
- * One Minecraft version Modrinth knows, from {@code /tag/game_version}.
+ * One Minecraft version from {@code /tag/game_version}.
  */
 @Getter
 @Accessors(fluent = true)

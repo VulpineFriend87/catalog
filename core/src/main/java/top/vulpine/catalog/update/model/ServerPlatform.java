@@ -5,12 +5,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The kind of server Catalog is running on, and which Modrinth loaders that server can run.
+ * The kind of server Catalog runs on and the Modrinth loaders it can run.
  *
- * <p>Modrinth does not widen loaders on its own: asking for {@code purpur} returns nothing for a
- * plugin published as {@code paper}, even though Purpur runs Paper plugins perfectly well. Since
- * most authors declare only the one platform they build against, asking for a single loader would
- * miss almost everything, so each constant carries itself plus everything it is a superset of.</p>
+ * <p>Modrinth does not widen loaders: asking for {@code purpur} finds nothing published as
+ * {@code paper}. Each constant carries itself and everything it is a superset of.</p>
  */
 public enum ServerPlatform {
 
@@ -19,11 +17,9 @@ public enum ServerPlatform {
     PURPUR("purpur", "paper", "spigot", "bukkit"),
 
     /**
-     * Folia is not simply a superset of Paper: it refuses to load any plugin whose descriptor does
-     * not declare {@code folia-supported}. The loaders below are still inclusive, because the
-     * {@code folia} tag on Modrinth is set per version and is easy for an author to forget, and a
-     * missing tag must never silently hide an update that would in fact run. Whether a build really
-     * works is settled by reading the downloaded jar, which is the same field Folia itself checks.
+     * Folia refuses plugins whose descriptor does not declare {@code folia-supported}. The loaders
+     * below still include Paper's. Authors often forget the {@code folia} tag on Modrinth. The
+     * downloaded jar is checked for the field instead.
      */
     FOLIA("folia", "paper", "spigot", "bukkit"),
 
@@ -50,9 +46,9 @@ public enum ServerPlatform {
     }
 
     /**
-     * Every loader this server can run, most specific first.
+     * Every loader this server can run. Most specific first.
      *
-     * @return the flattened ladder
+     * @return the loaders
      */
     public List<String> loaders() {
         return loaders;
@@ -68,7 +64,7 @@ public enum ServerPlatform {
     }
 
     /**
-     * Whether a version declares this exact platform rather than one it is compatible with.
+     * Whether a version declares this exact platform.
      *
      * @param declared the loaders a Modrinth version declares
      * @return true if the exact platform is named

@@ -20,7 +20,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Finds what a command names.
+ * Resolves the plugins, projects and builds commands name.
  */
 public final class Lookup {
 
@@ -66,7 +66,7 @@ public final class Lookup {
     }
 
     /**
-     * Finds a trashed plugin by file name and plugin name.
+     * Finds a trashed plugin by its stored name, name, slug, file name or project id.
      */
     public TrashEntry resolveTrashed(String query) {
 
@@ -77,14 +77,12 @@ public final class Lookup {
             return exact;
         }
 
-        String lowered = wanted.toLowerCase(Locale.ROOT);
-
         for (TrashEntry entry : catalog.trashed()) {
 
-            if (matches(entry.name(), lowered)
-                    || matches(entry.slug(), lowered)
-                    || matches(entry.fileName(), lowered)
-                    || matches(entry.projectId(), lowered)) {
+            if (wanted.equalsIgnoreCase(entry.name())
+                    || wanted.equalsIgnoreCase(entry.slug())
+                    || wanted.equalsIgnoreCase(entry.fileName())
+                    || wanted.equalsIgnoreCase(entry.projectId())) {
                 return entry;
             }
         }
@@ -157,7 +155,7 @@ public final class Lookup {
     }
 
     /**
-     * Whether a build is newer than what is installed.
+     * The project ids of every tracked plugin.
      */
     public Set<String> trackedProjectIds() {
 
@@ -179,7 +177,7 @@ public final class Lookup {
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
-     * @param query what was typed or clicked, payload and all
+     * @param query what was typed or clicked with any payload
      * @return the project, or null when nothing matched
      */
     public ModrinthProject projectFor(String query) {
@@ -194,8 +192,8 @@ public final class Lookup {
     /**
      * Finds a tracked plugin.
      *
-     * <p>An exact match on the display name, slug or project id wins; otherwise the first whose
-     * name starts with what was typed, so partial names work.</p>
+     * <p>An exact display name, slug or project id wins. Otherwise the first name starting with the
+     * query.</p>
      */
     public TrackedPlugin resolve(String query) {
 
@@ -203,9 +201,9 @@ public final class Lookup {
         List<TrackedPlugin> all = catalog.getTracking().all();
 
         for (TrackedPlugin tracked : all) {
-            if (matches(tracked.displayName(), wanted)
-                    || matches(tracked.slug(), wanted)
-                    || matches(tracked.projectId(), wanted)) {
+            if (wanted.equalsIgnoreCase(tracked.displayName())
+                    || wanted.equalsIgnoreCase(tracked.slug())
+                    || wanted.equalsIgnoreCase(tracked.projectId())) {
                 return tracked;
             }
         }
@@ -218,10 +216,6 @@ public final class Lookup {
         }
 
         return null;
-    }
-
-    private static boolean matches(String value, String wanted) {
-        return value != null && value.toLowerCase(Locale.ROOT).equals(wanted);
     }
 
 }

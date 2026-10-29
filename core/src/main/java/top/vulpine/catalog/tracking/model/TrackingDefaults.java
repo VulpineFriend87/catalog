@@ -25,7 +25,7 @@ public final class TrackingDefaults {
     /**
      * The settings a server gets when it has configured nothing.
      *
-     * @return release channel, no automatic updates
+     * @return the release channel and no automatic updates
      */
     public static TrackingDefaults standard() {
         return TrackingDefaults.builder().build();

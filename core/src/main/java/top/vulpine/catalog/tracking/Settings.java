@@ -63,18 +63,17 @@ public final class Settings {
     public void soak(TrackedPlugin plugin, int minutes, String by) throws TrackingException {
         plugin.soakMinutes(minutes == TrackedPlugin.INHERIT_SOAK ? minutes : Math.max(minutes, 0));
         tracking.save();
-        // The word rather than the number: -1 means follow the config, and rendering it as a
-        // duration would say "none", which is the opposite.
+        // -1 means the config default. As a duration it would read "none".
         history.add(HistoryEntry.setting(plugin, Event.SOAK,
                 plugin.soakMinutes() == TrackedPlugin.INHERIT_SOAK
                         ? "default" : String.valueOf(plugin.soakMinutes()), by));
     }
 
     /**
-     * Freezes a plugin at the version it has now, or lets it move again.
+     * Holds a plugin at its installed version or releases it.
      *
      * @param plugin the plugin to hold
-     * @param held   true to freeze it
+     * @param held   true to hold it
      * @param by     who asked
      */
     public void held(TrackedPlugin plugin, boolean held, String by) throws TrackingException {

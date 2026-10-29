@@ -3,7 +3,7 @@ package top.vulpine.catalog.platform;
 import net.kyori.adventure.text.Component;
 
 /**
- * Whoever a screen is shown to: a player or the console.
+ * A player or the console a screen is shown to.
  */
 public interface Viewer {
 
@@ -13,12 +13,12 @@ public interface Viewer {
     String name();
 
     /**
-     * @return false for the console, which cannot click
+     * @return false for the console
      */
     boolean isPlayer();
 
     /**
-     * @param node a node below {@code catalog.}, like {@code command.list}
+     * @param node a node below {@code catalog.} such as {@code command.list}
      * @return whether the viewer holds it, a wildcard above it, or any node below it
      */
     boolean has(String node);

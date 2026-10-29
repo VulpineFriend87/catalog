@@ -3,17 +3,17 @@ package top.vulpine.catalog.command.navigation;
 import java.util.Arrays;
 
 /**
- * A screen token followed by the screens it was opened from, newest first.
+ * A screen token followed by the tokens of the screens it was opened from.
  *
- * <p>{@code settings:luckperms<info:luckperms} is the settings page opened from the info page. A
- * screen reopened by Back or redrawn after an action gets its parent back from here.</p>
+ * <p>{@code settings:luckperms<info:luckperms} is the settings page opened from the info
+ * page.</p>
  */
 public final class Trail {
 
     /** Separates a screen from the one it was opened from. */
     private static final String WITHIN = "<";
 
-    /** How many screens a trail keeps, the current one included. */
+    /** How many screens a trail keeps including the current one. */
     static final int DEPTH = 4;
 
     private Trail() {
@@ -22,7 +22,7 @@ public final class Trail {
     /**
      * @param screen a screen token
      * @param from   the trail it was opened from, or null
-     * @return the screen followed by its trail, the oldest screens past {@link #DEPTH} dropped
+     * @return the trail with the screen in front and no more than {@link #DEPTH} screens
      */
     public static String within(String screen, String from) {
 

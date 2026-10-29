@@ -6,6 +6,7 @@ import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
@@ -27,7 +28,7 @@ import java.util.List;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * Removing, untracking and tracking plugins.
+ * {@code /catalog uninstall}, {@code untrack} and {@code track}.
  */
 public final class RemoveCommand implements OrphanCommand {
 
@@ -77,9 +78,7 @@ public final class RemoveCommand implements OrphanCommand {
 
             try {
 
-                // Removing is normally offered with an undo rather than a confirmation. That stops
-                // being enough when something else needs it: an undo cannot help a server that
-                // already failed to start.
+                // Asks first only when installed plugins require it.
                 if (!confirmations.confirmed(viewer, "remove:" + tracked.projectId(), data)) {
 
                     List<TrackedPlugin> dependents = catalog.dependentsOf(tracked);
@@ -100,7 +99,7 @@ public final class RemoveCommand implements OrphanCommand {
                         Press.screenOf(data)));
 
             } catch (Exception e) {
-                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Errors.rootMessage(e)));
             }
         });
     }
@@ -124,8 +123,7 @@ public final class RemoveCommand implements OrphanCommand {
 
             String name = tracked.displayName();
 
-            // A staged build is already in the update folder, so leaving it there would update a
-            // plugin Catalog has just been told to stop following.
+            // An untracked plugin keeps no staged build.
             if (tracked.pendingRestart()) {
                 catalog.cancelUpdate(tracked, viewer.name());
             }

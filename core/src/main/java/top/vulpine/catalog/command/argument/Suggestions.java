@@ -19,12 +19,10 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * Tab completion for the arguments that name a plugin Catalog already manages.
+ * Tab completion for Catalog's arguments.
  *
- * <p>Each one offers only the plugins the command could actually act on, so completing an argument
- * can never produce a command that is refused.</p>
- *
- * <p>Lamp builds these itself, so they take no constructor and reach Catalog as a Lamp dependency.</p>
+ * <p>Lamp builds these with their no-arg constructor. They get Catalog from
+ * {@code context.lamp().dependency}.</p>
  */
 public final class Suggestions {
 
@@ -47,7 +45,7 @@ public final class Suggestions {
 
     }
 
-    /** Every plugin the history mentions, installed or not. */
+    /** Every plugin the history mentions. */
     public static final class Logged implements SuggestionProvider<CommandActor> {
 
         @Override
@@ -84,7 +82,7 @@ public final class Suggestions {
 
     }
 
-    /** Only the plugins with an update waiting, plus the word that means all of them. */
+    /** The plugins with an update waiting and {@code all}. */
     public static final class Updatable implements SuggestionProvider<CommandActor> {
 
         @Override
@@ -122,7 +120,7 @@ public final class Suggestions {
 
     }
 
-    /** Only what is in the trash, by the name it was removed under. */
+    /** The trashed plugins by the name they were removed under. */
     public static final class Trashed implements SuggestionProvider<CommandActor> {
 
         @Override
@@ -139,7 +137,7 @@ public final class Suggestions {
 
     }
 
-    /** What is in the trash, plus the word that means every one of them. */
+    /** The trashed plugins and {@code all}. */
     public static final class Discardable implements SuggestionProvider<CommandActor> {
 
         @Override
@@ -163,9 +161,7 @@ public final class Suggestions {
     /**
      * Narrows a list of completions to what has been typed so far.
      *
-     * <p>Brigadier filters literals on the client, but anything the server supplies is sent as it
-     * is: Lamp hands every value straight to the builder without looking at the partial input, so
-     * without this the list never shrinks as you type.</p>
+     * <p>Lamp sends server-side suggestions without filtering them by the input.</p>
      */
     private static Collection<String> matching(ExecutionContext<CommandActor> context,
                                                List<String> names) {
@@ -175,7 +171,7 @@ public final class Suggestions {
     }
 
     /**
-     * @param typed what has been written for this argument, quoted or not
+     * @param typed what has been written for this argument with or without quotes
      * @param names every completion the command could offer
      * @return the ones that start with what was typed
      */
@@ -199,7 +195,7 @@ public final class Suggestions {
     }
 
     /**
-     * Drops the opening quote a name with a space is offered under, so a typed quote still matches.
+     * Drops the opening quote of a name with a space.
      */
     private static String unquoted(String value) {
 
@@ -223,7 +219,7 @@ public final class Suggestions {
     }
 
     /**
-     * What to offer for a plugin argument: the name the plugin is listed under.
+     * The name a plugin is listed under.
      */
     private static String suggestionFor(TrackedPlugin tracked) {
 

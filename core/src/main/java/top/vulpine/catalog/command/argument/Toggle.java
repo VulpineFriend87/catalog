@@ -1,7 +1,7 @@
 package top.vulpine.catalog.command.argument;
 
 /**
- * On or off, as an argument.
+ * An on/off argument.
  */
 public enum Toggle {
 

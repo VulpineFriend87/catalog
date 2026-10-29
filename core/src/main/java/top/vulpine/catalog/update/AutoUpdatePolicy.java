@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Decides which available updates Catalog is allowed to install automatically.
  *
- * <p>Nothing here touches the disk or the network, so it's testable without a server.</p>
+ * <p>Touches neither the disk nor the network.</p>
  */
 public final class AutoUpdatePolicy {
 
@@ -30,7 +30,7 @@ public final class AutoUpdatePolicy {
      *
      * @param candidates what the check found
      * @param now        the moment to judge the soak window against
-     * @return the candidates to stage, in the order given
+     * @return the candidates to stage in the order given
      */
     public List<UpdateCandidate> readyToApply(Collection<UpdateCandidate> candidates, Instant now) {
 
@@ -46,7 +46,7 @@ public final class AutoUpdatePolicy {
     }
 
     /**
-     * Whether this plugin has asked to be updated on its own.
+     * Whether this plugin has auto-update on.
      *
      * <p>A newer build replaces a staged one. A fresh install waits for its first load.</p>
      */
@@ -76,7 +76,7 @@ public final class AutoUpdatePolicy {
     }
 
     /**
-     * How long this plugin waits, which is its own setting unless it defers to the config.
+     * How long this plugin waits: its own setting or the config's.
      *
      * @param plugin the plugin to ask about
      * @return the soak window in minutes

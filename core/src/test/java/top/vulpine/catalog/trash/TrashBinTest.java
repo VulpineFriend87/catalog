@@ -139,11 +139,10 @@ class TrashBinTest {
     }
 
     /**
-     * Removals are filed under the millisecond they happened, so a fast enough machine puts several
-     * into one. Each still has to keep its own bytes, or an undo restores somebody else's.
+     * Removals are filed under the millisecond they happened. Several in one millisecond each keep
+     * their own bytes.
      *
-     * <p>The clock is stopped rather than trusted to collide: on a slow enough machine it never
-     * does, which is how this went out in the first place.</p>
+     * <p>The clock is stopped to force the collision.</p>
      */
     @Test
     @DisplayName("keeps removals apart even when they land in the same millisecond")
@@ -183,9 +182,7 @@ class TrashBinTest {
     }
 
     /**
-     * Two removals of differently named plugins never collide on a name, so only a stamp that is
-     * always past the last one keeps them in order. The clock is stopped to prove it is the stamp
-     * doing the work and not the machine being slow enough to tick between them.
+     * Two removals in one millisecond stay in order. The clock is stopped to force it.
      */
     @Test
     @DisplayName("lists newest first, because the wanted one is almost always the last removed")
@@ -208,8 +205,8 @@ class TrashBinTest {
     }
 
     /**
-     * The sidecar is written on a best-effort basis and its absence must not strand a jar: the
-     * stored name alone still says what the file was called and when it went.
+     * A missing sidecar does not strand a jar. The stored name still holds the file name and the
+     * removal time.
      */
     @Test
     @DisplayName("still lists and restores a removal whose metadata never got written")
@@ -281,8 +278,7 @@ class TrashBinTest {
     }
 
     /**
-     * The stored name reaches the bin from a click payload, so it has to be treated as input rather
-     * than as something Catalog wrote.
+     * The stored name comes from a click payload and is treated as input.
      */
     @Test
     @DisplayName("refuses a stored name that tries to walk out of the trash directory")
@@ -291,8 +287,7 @@ class TrashBinTest {
         TrashBin bin = bin();
         bin.bin(jar("Vault.jar", "v"), tracked("v", "Vault"), "x");
 
-        // Put a jar back where the traversal would land, so the guard is what stops it rather
-        // than the file happening not to be there.
+        // A jar where the traversal would land. Only the guard can stop it.
         jar("Vault.jar", "still here");
 
         assertAll(

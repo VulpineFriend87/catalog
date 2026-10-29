@@ -32,8 +32,7 @@ class TrackingStoreTest {
     }
 
     /**
-     * Modrinth versions are bound from JSON rather than constructed, since they exist to be read
-     * from the API and have no public constructor.
+     * Modrinth versions are bound from JSON. They have no public constructor.
      */
     private static ModrinthVersion version(String id, String number) {
         return Json.gson().fromJson("""

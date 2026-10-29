@@ -122,7 +122,7 @@ public final class CatalogPaper extends JavaPlugin {
     @Override
     public void onDisable() {
 
-        // A server Catalog refused to start on has no Adventure, which everything below reaches.
+        // Everything below needs Adventure. A refused start never loads it.
         if (!started) {
             return;
         }
@@ -184,8 +184,7 @@ public final class CatalogPaper extends JavaPlugin {
     /**
      * The Minecraft version this server runs.
      *
-     * <p>Read from {@code getBukkitVersion}, which every version has, rather than from
-     * {@code getMinecraftVersion}, which Paper only added later.</p>
+     * <p>Read from {@code getBukkitVersion}. Paper added {@code getMinecraftVersion} later.</p>
      */
     private String running() {
         return getServer().getBukkitVersion().split("-")[0];
@@ -194,12 +193,11 @@ public final class CatalogPaper extends JavaPlugin {
     /**
      * Whether one Minecraft version is older than another.
      *
-     * <p>Compared number by number rather than as text, because Paper moved from 1.21 to 26 and
-     * every way of ordering those two as strings puts them the wrong way round.</p>
+     * <p>Compared number by number. Paper went from 1.21 to 26.</p>
      *
      * @param version what the server reports
      * @param minimum the oldest Catalog supports
-     * @return whether the server is below it, and false for anything unreadable
+     * @return whether the server is below it. False for anything unreadable.
      */
     static boolean isOlderThan(String version, String minimum) {
 

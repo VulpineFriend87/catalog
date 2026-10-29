@@ -49,7 +49,7 @@ public final class ModrinthClient implements AutoCloseable {
 
     /**
      * @param userAgent        required by Modrinth
-     * @param token            Modrinth PAT, can be null for anonymous access
+     * @param token            Modrinth PAT, or null for anonymous access
      * @param cacheDirectory   where to keep conditional-request responses, or null to disable
      * @param permitsPerMinute the request budget
      * @param threads          how many requests may be in flight at once
@@ -92,7 +92,7 @@ public final class ModrinthClient implements AutoCloseable {
      * Finds the newest version compatible with this server for each of the given files.
      *
      * @param sha512Hashes the hashes of the currently installed files
-     * @param loaders      the loaders to accept, e.g. paper, purpur, folia
+     * @param loaders      the loaders to accept
      * @param gameVersions the Minecraft versions to accept, or null for all
      * @param channels     the release channels to accept
      * @return a future of hash to the newest matching version
@@ -135,7 +135,7 @@ public final class ModrinthClient implements AutoCloseable {
      * Fetches several projects at once.
      *
      * @param ids the project ids
-     * @return a future of the projects, in whatever order the API returns them
+     * @return a future of the projects in the order the API returns them
      */
     public CompletableFuture<List<ModrinthProject>> projects(Collection<String> ids) {
 
@@ -157,12 +157,12 @@ public final class ModrinthClient implements AutoCloseable {
     }
 
     /**
-     * Lists the versions of a project, optionally narrowed to what this server can run.
+     * Lists the versions of a project.
      *
      * @param idOrSlug     the project id or slug
      * @param loaders      the loaders to accept, or null for all
      * @param gameVersions the Minecraft versions to accept, or null for all
-     * @return a future of the versions, newest first
+     * @return a future of the versions sorted newest first
      */
     public CompletableFuture<List<ModrinthVersion>> versions(String idOrSlug,
                                                              List<String> loaders,
@@ -178,7 +178,7 @@ public final class ModrinthClient implements AutoCloseable {
     /**
      * Lists every Minecraft version Modrinth knows.
      *
-     * @return a future of the versions, newest first
+     * @return a future of the versions sorted newest first
      */
     public CompletableFuture<List<GameVersionTag>> gameVersions() {
         return transport.get("/tag/game_version", GAME_VERSION_LIST);
@@ -197,8 +197,8 @@ public final class ModrinthClient implements AutoCloseable {
     /**
      * Searches for projects.
      *
-     * @param query  the search text, may be null or empty to browse
-     * @param facets the Modrinth facet groups; entries within a group are ORed, groups are ANDed
+     * @param query  the search text, or null or empty to browse
+     * @param facets the Modrinth facet groups. Entries in a group are ORed and groups are ANDed.
      * @param limit  how many hits to return
      * @param offset how many hits to skip
      * @return a future of one page of results
@@ -228,7 +228,7 @@ public final class ModrinthClient implements AutoCloseable {
     /**
      * Downloads a file to disk.
      *
-     * @param url    the file URL, as given by Modrinth
+     * @param url    the file URL Modrinth gave
      * @param target where to write it
      * @return a future of the written file
      */

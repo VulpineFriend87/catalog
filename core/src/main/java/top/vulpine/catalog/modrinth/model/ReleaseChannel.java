@@ -5,8 +5,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Release channel of a Modrinth version.
  *
- * <p>The declaration order is from most to least stable, which
- * {@link #accepts(ReleaseChannel)} relies on.</p>
+ * <p>Declared from most to least stable. {@link #accepts(ReleaseChannel)} relies on the order.</p>
  */
 public enum ReleaseChannel {
 
@@ -22,8 +21,7 @@ public enum ReleaseChannel {
     /**
      * Whether a server subscribed to this channel should be offered the given version.
      *
-     * <p>Channels are cumulative: a server on {@code BETA} also wants releases, because a release
-     * published after a beta is the newer build.</p>
+     * <p>Channels are cumulative: a server on {@code BETA} is also offered releases.</p>
      *
      * @param other the channel of the candidate version
      * @return true if the candidate is at least as stable as this channel

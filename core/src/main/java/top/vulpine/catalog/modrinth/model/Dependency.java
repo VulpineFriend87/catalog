@@ -6,8 +6,8 @@ import lombok.experimental.Accessors;
 /**
  * A dependency declared by a Modrinth version.
  *
- * <p>Either {@link #projectId()} or {@link #versionId()} may be null: a dependency can point at a
- * whole project, meaning "any compatible version", or at one exact version.</p>
+ * <p>Either {@link #projectId()} or {@link #versionId()} may be null. A dependency points at a
+ * whole project or at one exact version.</p>
  */
 @Getter
 @Accessors(fluent = true)

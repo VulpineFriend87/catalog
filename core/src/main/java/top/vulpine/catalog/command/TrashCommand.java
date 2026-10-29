@@ -8,6 +8,7 @@ import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
@@ -26,7 +27,7 @@ import top.vulpine.catalog.trash.model.TrashEntry;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * The trash, restoring and deleting removals.
+ * {@code /catalog trash} and its subcommands.
  */
 public final class TrashCommand implements OrphanCommand {
 
@@ -89,13 +90,13 @@ public final class TrashCommand implements OrphanCommand {
                 send(viewer, Outcomes.restored(entry.displayName(), tracked != null));
 
             } catch (Exception e) {
-                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Errors.rootMessage(e)));
             }
         });
     }
 
     /**
-     * Deletes a trash entry permanently (or all of them).
+     * Deletes one trash entry or all of them.
      */
     @Subcommand("trash delete")
     @Description("Delete a removal permanently")
@@ -127,7 +128,7 @@ public final class TrashCommand implements OrphanCommand {
                 send(viewer, Outcomes.discarded(entry.displayName()));
 
             } catch (Exception e) {
-                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Errors.rootMessage(e)));
             }
         });
     }
@@ -156,7 +157,7 @@ public final class TrashCommand implements OrphanCommand {
                 send(viewer, Outcomes.emptied(deleted));
 
             } catch (Exception e) {
-                send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+                send(viewer, Outcomes.failed(Errors.rootMessage(e)));
             }
         });
     }

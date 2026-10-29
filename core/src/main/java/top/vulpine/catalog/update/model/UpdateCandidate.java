@@ -7,11 +7,10 @@ import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
 /**
- * A newer version of a tracked plugin that this server can actually run.
+ * A newer version of a tracked plugin that this server can run.
  *
- * <p>Everything here has already passed the checks Modrinth can answer: the game version, the
- * loader, and the release channel were all filtered server-side. What remains unverified is what
- * only the jar itself can say, and that is checked after downloading, before anything is staged.</p>
+ * <p>The game version, loader and release channel were filtered by Modrinth. What only the jar can
+ * say is checked after downloading.</p>
  */
 @Getter
 @Builder
@@ -23,11 +22,9 @@ public final class UpdateCandidate {
     private final ModrinthVersion version;
 
     /**
-     * Whether the candidate names this exact platform, rather than one it happens to be compatible
-     * with.
+     * Whether the candidate declares this exact platform.
      *
-     * <p>It matters on Folia, where a build that does not declare support
-     * will be refused by the server and is informational everywhere else.</p>
+     * <p>On Folia a build that does not declare it is refused.</p>
      */
     private final boolean declaresPlatform;
 

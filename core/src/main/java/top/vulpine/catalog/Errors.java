@@ -1,14 +1,14 @@
 package top.vulpine.catalog;
 
 /**
- * Reading a cause out of a failure.
+ * Finds the message of an exception's root cause.
  */
 public final class Errors {
 
     private Errors() {}
 
     /**
-     * The message worth showing, since a failed future wraps the real cause.
+     * The message of the real cause inside a failed future.
      *
      * @param error what was thrown
      * @return the message, or the class name when there is none

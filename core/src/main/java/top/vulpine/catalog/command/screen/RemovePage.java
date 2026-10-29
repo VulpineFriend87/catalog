@@ -1,7 +1,6 @@
 package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextDecoration;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
@@ -35,8 +34,8 @@ public final class RemovePage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Remove ", DANGER).decorate(TextDecoration.BOLD))
-                .append(Component.text(plugin.displayName(), TEXT).decorate(TextDecoration.BOLD))
+                .append(title("Remove ", DANGER))
+                .append(title(plugin.displayName(), TEXT))
                 .build());
 
         out.add(line()

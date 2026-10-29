@@ -9,9 +9,8 @@ import java.util.List;
 /**
  * What Catalog needs from the server it runs on.
  *
- * <p>Applying a build is a request rather than a folder, because the platforms do it differently:
- * Paper takes jars from an update folder at boot, Velocity has none and the jar is replaced where
- * it sits.</p>
+ * <p>Paper applies builds from an update folder at boot. Velocity has none and replaces the jar
+ * where it sits.</p>
  */
 public interface Platform {
 
@@ -31,14 +30,14 @@ public interface Platform {
     String ownFileName();
 
     /**
-     * @return what to call the place a staged build waits, for log lines
+     * @return the name of the place a staged build waits
      */
     String stagingName();
 
     /**
      * Puts a downloaded build where it replaces the installed one at the next restart.
      *
-     * @param staged   the downloaded file, which is moved
+     * @param staged   the downloaded file to move
      * @param fileName the name it should take
      */
     void applyAtRestart(Path staged, String fileName);
@@ -102,7 +101,7 @@ public interface Platform {
     void async(Runnable task);
 
     /**
-     * Runs a task off the main thread, every {@code period} after the first.
+     * Runs a task off the main thread every {@code period}.
      */
     void repeat(Runnable task, Duration period);
 

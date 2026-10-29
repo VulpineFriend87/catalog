@@ -18,8 +18,7 @@ import java.util.Map;
 /**
  * Asks Modrinth what is out of date.
  *
- * <p>Plugins are grouped by the channel they follow and each group is one request, so a whole
- * server is answered in at most three no matter how many plugins are installed.</p>
+ * <p>One request per release channel. A whole server takes at most three.</p>
  */
 public final class UpdateChecker {
 
@@ -31,7 +30,7 @@ public final class UpdateChecker {
          * @param loaders      the loaders this server accepts
          * @param gameVersions the Minecraft versions this server accepts
          * @param channels     the release channels to consider
-         * @return hash to the newest matching version, absent where there is none
+         * @return hash to the newest matching version. A hash with none is absent.
          */
         Map<String, ModrinthVersion> latest(List<String> hashes, List<String> loaders,
                                             List<String> gameVersions, List<ReleaseChannel> channels);
@@ -56,7 +55,7 @@ public final class UpdateChecker {
      * <p>Blocks on the lookups, so it must be called off the main thread.</p>
      *
      * @param target what this server is
-     * @return the available updates, in the order the plugins are tracked
+     * @return the available updates in the order the plugins are tracked
      */
     public List<UpdateCandidate> check(ServerTarget target) {
 
@@ -71,7 +70,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Splits the tracked plugins by channel, skipping the ones that cannot produce an update.
+     * Splits the tracked plugins by channel. Skips the ones that cannot produce an update.
      */
     private Map<ReleaseChannel, List<TrackedPlugin>> groupByChannel() {
 
@@ -122,7 +121,7 @@ public final class UpdateChecker {
     }
 
     /**
-     * Asks for each loader group in turn, narrowing to the plugins still unanswered.
+     * Asks each loader group in turn about the plugins still unanswered.
      */
     private Map<String, ModrinthVersion> askByTier(Collection<String> hashes, ReleaseChannel channel,
                                                    ServerTarget target) {

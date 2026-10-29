@@ -22,7 +22,7 @@ public final class Redraw {
 
     private final Screens screens;
 
-    /** Asked for when needed, because it redraws through this. */
+    /** Read when needed. Installs is built after this. */
     private final Supplier<Installs> installs;
 
     public Redraw(Chat chat, Lookup lookup, Screens screens, Supplier<Installs> installs) {
@@ -33,7 +33,7 @@ public final class Redraw {
     }
 
     /**
-     * Draws a screen again, with the trail it was opened from.
+     * Draws a screen again with the trail it was opened from.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
@@ -49,7 +49,7 @@ public final class Redraw {
     }
 
     /**
-     * Reports what an action did, and redraws the screen it was taken on.
+     * Redraws the screen an action was taken on and sends what it did.
      *
      * @param data    what the button carried, or null when the command was typed
      * @param outcome the one line saying what happened

@@ -26,7 +26,7 @@ public final class HelpPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Catalog", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Catalog", BRAND))
                 .append(Component.text(" " + version, MUTED))
                 .build());
 
@@ -42,7 +42,7 @@ public final class HelpPage {
         return out;
     }
 
-    /** The help screen in groups, each separated by an empty line. */
+    /** The help screen in groups. An empty line separates them. */
     private static final List<List<Entry>> HELP = List.of(
             List.of(
                     new Entry("list", "", "Managed plugins"),
@@ -84,7 +84,7 @@ public final class HelpPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Catalog", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Catalog", BRAND))
                 .append(Component.text("  commands", MUTED))
                 .build());
 

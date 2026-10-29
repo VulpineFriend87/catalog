@@ -8,7 +8,7 @@ import net.kyori.adventure.text.format.TextColor;
  */
 public final class Palette {
 
-    /** Catalog's color. */
+    /** Catalog's colour. */
     public static final TextColor BRAND = TextColor.color(0xC08CFF);
 
     /** Something waiting to be applied. */

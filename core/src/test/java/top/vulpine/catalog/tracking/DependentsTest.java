@@ -51,8 +51,7 @@ class DependentsTest {
     }
 
     /**
-     * Versions are bound from JSON rather than constructed, since they exist to be read from the
-     * API and have no public constructor.
+     * Versions are bound from JSON. They have no public constructor.
      */
     private TrackedPlugin install(String projectId, String name, String... dependencies) {
 

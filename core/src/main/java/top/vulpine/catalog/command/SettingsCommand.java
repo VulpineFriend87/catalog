@@ -25,7 +25,7 @@ import java.util.Locale;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * One plugin's settings.
+ * {@code /catalog settings} and the setting subcommands.
  */
 public final class SettingsCommand implements OrphanCommand {
 

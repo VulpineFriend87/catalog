@@ -21,20 +21,18 @@ public final class Confirmations {
     /**
      * Forgets a removal waiting to be confirmed.
      *
-     * <p>Called whenever a screen is drawn, which is what makes Cancel actually cancel: the button
-     * navigates away, and without this the confirmation would still be armed, so pressing the same
-     * remove button again inside the window would go straight through without asking.</p>
+     * <p>Called whenever a screen is drawn.</p>
      */
     public void abandon(Viewer viewer) {
         asked.remove(viewer.name());
     }
 
     /**
-     * Whether to go ahead, or to ask first.
+     * Whether to go ahead or ask first.
      *
-     * @param action identifies precisely what is being confirmed
+     * @param action what is being confirmed
      * @param data   the payload the command arrived with, or null if it was typed
-     * @return true to go ahead, false when the caller should show a confirmation instead
+     * @return true to go ahead, false to ask first
      */
     public boolean confirmed(Viewer viewer, String action, String data) {
 
@@ -54,8 +52,7 @@ public final class Confirmations {
     }
 
     /**
-     * @param action what is waiting to be confirmed, identified precisely enough that confirming
-     *               one thing can never carry out another
+     * @param action exactly what is waiting to be confirmed
      */
     private record Pending(String action, Instant asked) {
 

@@ -16,7 +16,7 @@ import java.util.List;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * The commands about Catalog itself.
+ * {@code /catalog}, {@code help} and {@code reload}.
  */
 public final class CatalogCommand implements OrphanCommand {
 
@@ -47,7 +47,7 @@ public final class CatalogCommand implements OrphanCommand {
     /**
      * Reloads config.yml.
      *
-     * <p>Only the settings are reloaded and not the tracking state.</p>
+     * <p>The tracking state is not reloaded.</p>
      */
     @Subcommand("reload")
     @Description("Reload the configuration")

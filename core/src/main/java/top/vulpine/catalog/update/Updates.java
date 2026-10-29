@@ -7,7 +7,6 @@ import top.vulpine.catalog.history.HistoryEntry;
 import top.vulpine.catalog.install.DependencyResolver;
 import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.modrinth.ModrinthClient;
-import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.TrackingException;
@@ -30,9 +29,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
+import java.util.function.UnaryOperator;
 
 /**
- * What is out of date, and what to install automatically.
+ * What is out of date and what to install automatically.
  *
  * <p>Every method blocks, so none may be called on the server main thread.</p>
  */
@@ -44,6 +44,7 @@ public final class Updates {
     private final Installer installer;
     private final IntSupplier defaultSoakMinutes;
     private final Function<ModrinthVersion, DependencyResolver.Resolution> dependencies;
+    private final UnaryOperator<List<DependencyResolver.Requirement>> named;
     private final History history;
 
     /** Rescans the plugins folder and settles the tracking file against it. */
@@ -53,7 +54,7 @@ public final class Updates {
     private volatile Instant checkedAt;
 
     /**
-     * Why the last automatic update of a plugin did not happen, by project id.
+     * By project id: why the last automatic update did not happen.
      */
     private final Map<String, String> failed = new ConcurrentHashMap<>();
 
@@ -63,7 +64,7 @@ public final class Updates {
     private volatile String unreachable;
 
     /**
-     * Why each held back build was held back, by version id.
+     * By version id: why each build was held back.
      */
     private final Map<String, String> missingByVersion = new ConcurrentHashMap<>();
 
@@ -75,6 +76,7 @@ public final class Updates {
     public Updates(Platform platform, ModrinthClient modrinth, TrackingStore tracking,
                    Installer installer, IntSupplier defaultSoakMinutes,
                    Function<ModrinthVersion, DependencyResolver.Resolution> dependencies,
+                   UnaryOperator<List<DependencyResolver.Requirement>> named,
                    History history, BooleanSupplier reconcile) {
         this.platform = platform;
         this.modrinth = modrinth;
@@ -82,6 +84,7 @@ public final class Updates {
         this.installer = installer;
         this.defaultSoakMinutes = defaultSoakMinutes;
         this.dependencies = dependencies;
+        this.named = named;
         this.history = history;
         this.reconcile = reconcile;
     }
@@ -90,7 +93,7 @@ public final class Updates {
      * The required dependencies a build needs that this server does not have.
      *
      * @param version the build being considered
-     * @return what is missing, empty when the build can be installed as it is
+     * @return what is missing, or an empty list
      */
     public List<DependencyResolver.Requirement> missingFor(ModrinthVersion version) {
 
@@ -105,7 +108,7 @@ public final class Updates {
     }
 
     /**
-     * @return why each failed automatic update failed, by project id
+     * @return the reason each automatic update failed by project id
      */
     public Map<String, String> failures() {
         return Map.copyOf(failed);
@@ -126,7 +129,7 @@ public final class Updates {
     }
 
     /**
-     * Asks Modrinth what is out of date and remembers the answer.
+     * Asks Modrinth again what is out of date.
      *
      * @return the available updates
      */
@@ -179,7 +182,7 @@ public final class Updates {
     }
 
     /**
-     * Checks, then installs whatever the policy allows.
+     * Checks and installs whatever the policy allows.
      */
     public void check() {
 
@@ -269,10 +272,9 @@ public final class Updates {
     }
 
     /**
-     * Keeps an update back because the build needs something this server does not have.
+     * Holds back an update whose build needs a plugin this server does not have.
      *
-     * <p>Installing it would leave a plugin that cannot load. The update stays on offer, so
-     * {@code /catalog list} still shows it and pressing Update walks through what it needs.</p>
+     * <p>The update stays on offer in {@code /catalog list}.</p>
      */
     private void hold(UpdateCandidate candidate, List<DependencyResolver.Requirement> missing) {
 
@@ -284,7 +286,12 @@ public final class Updates {
             return;
         }
 
-        List<String> names = named(missing);
+        List<String> names = new ArrayList<>();
+
+        for (DependencyResolver.Requirement requirement : named.apply(missing)) {
+            names.add(requirement.name());
+        }
+
         reason = String.join(", ", names) + " required missing";
 
         missingByVersion.put(versionId, reason);
@@ -301,45 +308,9 @@ public final class Updates {
     }
 
     /**
-     * The names of what is missing, for the line that says an update was held back.
+     * The updates from the last check that still apply to the installed plugins.
      *
-     * <p>A missing dependency is not installed, so nothing on disk knows what it is called. This
-     * runs inside the update check, which is already talking to Modrinth, and only when something
-     * is actually held back.</p>
-     */
-    private List<String> named(List<DependencyResolver.Requirement> missing) {
-
-        List<String> ids = new ArrayList<>();
-
-        for (DependencyResolver.Requirement requirement : missing) {
-            ids.add(requirement.projectId());
-        }
-
-        try {
-
-            Map<String, String> titles = new HashMap<>();
-
-            for (ModrinthProject project : modrinth.projects(ids).join()) {
-                titles.put(project.id(), project.title());
-            }
-
-            List<String> names = new ArrayList<>();
-
-            for (String id : ids) {
-                names.add(titles.getOrDefault(id, id));
-            }
-
-            return names;
-
-        } catch (Exception e) {
-            // The ids still identify them, which is more than nothing on a line nobody can act on.
-            return ids;
-        }
-    }
-
-    /**
-     * The updates still worth offering: what the last check found, measured against the plugins as
-     * they are now, minus fresh installs not loaded yet.
+     * <p>Fresh installs not loaded yet are left out.</p>
      *
      * @return the open update candidates
      */
@@ -368,7 +339,7 @@ public final class Updates {
     }
 
     /**
-     * The open updates keyed by project id, which is how the list annotates its rows.
+     * The open updates keyed by project id.
      *
      * @return project id to candidate
      */
@@ -386,10 +357,8 @@ public final class Updates {
     /**
      * Notices a staged build that something else already applied.
      *
-     * <p>Paper consumes the update folder in {@code FileProviderSource#checkUpdate}, which runs for
-     * every plugin file it loads, not only during the startup scan. So a reload tool loading a
-     * single plugin applies whatever Catalog staged for it, there and then. What Catalog must not
-     * do is keep insisting a restart is owed for a build that is already running.</p>
+     * <p>Paper takes from the update folder in {@code FileProviderSource#checkUpdate} for every
+     * plugin file it loads. A reload tool loading one plugin applies its staged build at once.</p>
      */
     private void noticeStagedApplied() throws TrackingException {
 
@@ -397,10 +366,8 @@ public final class Updates {
             return;
         }
 
-        // Where the jar went cannot be guessed from here: applying a build renames it, and so does
-        // replacing one by hand. The scan is the only thing that matches on contents and project id
-        // rather than on a name, so it decides. It costs a folder hash and one call to Modrinth,
-        // and only runs once something has already taken a staged build.
+        // The scan matches on contents and project id. Applying a build and replacing one by hand
+        // both rename the jar.
         reconcile.getAsBoolean();
 
         List<TrackedPlugin> abandoned = stagedAndWaiting();
@@ -409,8 +376,7 @@ public final class Updates {
             return;
         }
 
-        // Anything the scan could not account for really is gone: no jar on disk holds it, under
-        // any name.
+        // Anything the scan could not account for is gone.
         for (TrackedPlugin plugin : abandoned) {
             history.add(HistoryEntry.lost(plugin));
             plugin.pendingRestart(false);
@@ -427,9 +393,9 @@ public final class Updates {
     }
 
     /**
-     * The plugins owed a restart whose staged build is no longer in the update folder.
+     * The plugins waiting for a restart whose staged build is no longer in the update folder.
      *
-     * @return the plugins something has taken a build from, never null
+     * @return the plugins whose staged build something else applied, or an empty list
      */
     private List<TrackedPlugin> stagedAndWaiting() {
 
@@ -445,7 +411,7 @@ public final class Updates {
     }
 
     /**
-     * Everything about a tracked plugin that decides whether it can be updated, in one line.
+     * One line with what decides whether a tracked plugin can be updated.
      */
     private static String state(TrackedPlugin tracked) {
 

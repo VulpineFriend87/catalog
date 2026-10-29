@@ -27,7 +27,7 @@ class DependencyResolverTest {
     /** What is already on the server. */
     private final Set<String> installed = new HashSet<>();
 
-    /** Which projects were actually looked up, to prove the walk stops where it should. */
+    /** Which projects were looked up. */
     private final List<String> asked = new ArrayList<>();
 
     private DependencyResolver resolver() {
@@ -38,8 +38,7 @@ class DependencyResolverTest {
     }
 
     /**
-     * Versions are bound from JSON rather than constructed, since they exist to be read from the
-     * API and have no public constructor.
+     * Versions are bound from JSON. They have no public constructor.
      */
     private ModrinthVersion version(String projectId, String... dependencies) {
 
@@ -97,8 +96,7 @@ class DependencyResolverTest {
     }
 
     /**
-     * The list the install screen shows is what is about to be written to disk. Which dependency
-     * pulled in which is not a fact anyone acts on, so the graph arrives flat.
+     * The graph arrives flat.
      */
     @Test
     @DisplayName("follows requirements through the graph and returns them flat")
@@ -133,8 +131,7 @@ class DependencyResolverTest {
     }
 
     /**
-     * Nothing stops an author declaring that two plugins require each other. Without the visited
-     * set that would be followed until the stack ran out.
+     * Two plugins can require each other.
      */
     @Test
     @DisplayName("a cycle terminates instead of being followed forever")
@@ -182,8 +179,7 @@ class DependencyResolverTest {
     }
 
     /**
-     * Optional dependencies are never installed on their own, so what they in turn require is not
-     * this server's problem and is not fetched.
+     * What an optional dependency requires is not fetched.
      */
     @Test
     @DisplayName("reads optional dependencies from the root only")

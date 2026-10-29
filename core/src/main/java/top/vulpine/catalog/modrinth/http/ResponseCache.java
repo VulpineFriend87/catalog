@@ -13,8 +13,7 @@ import java.util.HexFormat;
 /**
  * An on-disk store of ETags and response bodies for GET requests.
  *
- * <p>Lets a repeated check cost a {@code 304 Not Modified} instead of a full body, which matters
- * for the version listings the GUI hits repeatedly. Purely an optimization.</p>
+ * <p>A repeated check is answered with {@code 304 Not Modified}.</p>
  */
 public final class ResponseCache {
 
@@ -25,7 +24,7 @@ public final class ResponseCache {
     }
 
     /**
-     * The cached response for a URL, if one was stored.
+     * The cached response for a URL.
      *
      * @param url the request URL
      * @return the entry, or null if nothing usable is cached
@@ -75,7 +74,7 @@ public final class ResponseCache {
             Files.createDirectories(directory);
             Files.writeString(file, etag + "\n" + body, StandardCharsets.UTF_8);
         } catch (IOException ignored) {
-            // A cache that cannot be written is not an error worth surfacing to the operator.
+            // A failed cache write is ignored.
         }
     }
 

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 /**
- * Paper, Purpur and Folia, as Catalog sees them.
+ * The {@link top.vulpine.catalog.platform.Platform} of Paper, Purpur and Folia.
  */
 public final class PaperPlatform implements Platform {
 
@@ -31,7 +31,7 @@ public final class PaperPlatform implements Platform {
     /** The jar Catalog was loaded from. */
     private final Path ownJar;
 
-    /** Reads the configuration again, false when it could not be read. */
+    /** Reads the configuration again. False when it could not be read. */
     private final BooleanSupplier reload;
 
     public PaperPlatform(JavaPlugin plugin, PlatformScheduler scheduler, Path ownJar, BooleanSupplier reload) {
@@ -75,7 +75,7 @@ public final class PaperPlatform implements Platform {
     }
 
     /**
-     * The folder Catalog manages, which is the parent of its own data folder.
+     * The parent of Catalog's data folder.
      */
     @Override
     public Path pluginsFolder() {

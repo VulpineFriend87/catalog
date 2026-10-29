@@ -1,6 +1,7 @@
 package top.vulpine.catalog.command.service;
 
 import top.vulpine.catalog.Catalog;
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.argument.ListFilter;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.navigation.Screen;
@@ -34,7 +35,7 @@ import java.util.Set;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * Builds a screen from the catalog and sends it.
+ * Sends the screens commands open.
  */
 public final class Screens {
 
@@ -54,7 +55,7 @@ public final class Screens {
     }
 
     /**
-     * Draws what one build declares it needs.
+     * Sends what one build declares.
      */
     public void showDependencies(Viewer viewer, String query, String wanted, String from) {
 
@@ -85,15 +86,15 @@ public final class Screens {
             send(viewer, DependenciesPage.dependencies(project, version, catalog.named(declared), from));
 
         } catch (Exception e) {
-            send(viewer, Outcomes.failed(Chat.rootMessage(e)));
+            send(viewer, Outcomes.failed(Errors.rootMessage(e)));
         }
     }
 
     /**
-     * Draws the screen that asks before an install, update or switch.
+     * Sends the question asked before an install, update or switch.
      *
      * @param installed the plugin as tracked now, or null for a first install
-     * @param here      this screen, so a dependency installed from it comes back to it
+     * @param here      this screen
      * @param command   what confirming runs
      */
     public void showChange(Viewer viewer, Change change, ModrinthProject project,
@@ -106,7 +107,7 @@ public final class Screens {
 
         Press asked = Press.of(data);
 
-        // Its buttons lead to where it was asked from, not back here.
+        // Its buttons lead to where it was asked from.
         if (asked != null && here.equals(Trail.current(asked.screen()))) {
             String parent = Trail.parent(asked.screen());
             asked = Press.on(parent != null ? parent : new Screen.InfoScreen(project.slug()).token());
@@ -127,7 +128,7 @@ public final class Screens {
     }
 
     /**
-     * Renders one plugin's settings.
+     * Sends one plugin's settings.
      */
     public void showSettings(Viewer viewer, TrackedPlugin tracked, String from) {
         confirmations.abandon(viewer);
@@ -135,7 +136,7 @@ public final class Screens {
     }
 
     /**
-     * Renders the plugin list.
+     * Sends the plugin list.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
@@ -173,7 +174,7 @@ public final class Screens {
     }
 
     /**
-     * Builds and sends the project page.
+     * Sends a project's page.
      */
     public void showProject(Viewer viewer, String query) {
 
@@ -205,7 +206,7 @@ public final class Screens {
                     catalog.platformLoaders(), catalog.gameVersions()));
 
         } catch (Exception e) {
-            send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
+            send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));
         }
     }
 
@@ -214,7 +215,7 @@ public final class Screens {
     }
 
     /**
-     * Renders a page of search results.
+     * Sends a page of search results.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      */
@@ -227,8 +228,7 @@ public final class Screens {
             SearchResults results = catalog.search(query, SearchPage.PAGE,
                     (page - 1) * SearchPage.PAGE);
 
-            // Text search does not match project ids, so a query that found nothing and could
-            // be one is worth one direct lookup before giving up.
+            // Text search does not match project ids. A one-word query that found nothing is tried as one.
             if (results.hits().isEmpty() && !query.contains(" ")) {
                 showProject(viewer, query);
                 return;
@@ -237,7 +237,7 @@ public final class Screens {
             send(viewer, SearchPage.search(query, results, page, lookup.trackedProjectIds()));
 
         } catch (Exception e) {
-            send(viewer, Outcomes.unreachable(Chat.rootMessage(e)));
+            send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));
         }
     }
 

@@ -1,7 +1,7 @@
 package top.vulpine.catalog.history;
 
 /**
- * What happened.
+ * The kind of a history entry.
  */
 public enum Event {
 
@@ -35,9 +35,9 @@ public enum Event {
     SOAK;
 
     /**
-     * Whether this is a setting rather than something that changed what is installed.
+     * Whether this is a change of setting.
      *
-     * @return true for the rows the screen draws quieter
+     * @return true for the rows the history draws muted
      */
     public boolean isSetting() {
         return this == HELD || this == UNHELD || this == AUTO_UPDATE

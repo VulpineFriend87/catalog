@@ -8,7 +8,7 @@ import lombok.experimental.Accessors;
 import java.util.List;
 
 /**
- * What this server is.
+ * The platform, Minecraft version and Java version of this server.
  *
  * <p>Built by the platform module.</p>
  */
@@ -21,11 +21,11 @@ public final class ServerTarget {
     private final ServerPlatform platform;
 
     /**
-     * The exact Minecraft version, or null on a proxy, which has none.
+     * The exact Minecraft version, or null on a proxy.
      */
     private final String gameVersion;
 
-    /** The Java feature version this server runs on, for checking a downloaded jar against it. */
+    /** The Java feature version this server runs on. */
     private final int javaVersion;
 
     /**
@@ -38,7 +38,7 @@ public final class ServerTarget {
     }
 
     /**
-     * The game versions to accept, which is this one and nothing else.
+     * The game versions to accept: this one only.
      *
      * @return the acceptable versions, or null to accept every version
      */

@@ -11,7 +11,7 @@ public enum DependencyType {
     @SerializedName("required")
     REQUIRED,
 
-    /** Unlocks extra behaviour, but is never installed on its own. */
+    /** Adds features when present. Never installed on its own. */
     @SerializedName("optional")
     OPTIONAL,
 
@@ -19,7 +19,7 @@ public enum DependencyType {
     @SerializedName("incompatible")
     INCOMPATIBLE,
 
-    /** Already shaded into the jar, so nothing has to be installed. */
+    /** Already shaded into the jar. */
     @SerializedName("embedded")
     EMBEDDED
 

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Every {@code /catalog} subcommand, wired together.
+ * The {@code /catalog} subcommands.
  */
 public final class Commands {
 
@@ -30,15 +30,13 @@ public final class Commands {
             InstallCommand.class, UpdateCommand.class, RemoveCommand.class, TrashCommand.class,
             SettingsCommand.class, HistoryCommand.class, SearchCommand.class);
 
-    /** The permission each subcommand needs, which decides the buttons a viewer sees. */
+    /** The permission each subcommand needs. */
     public static final CommandPermissions PERMISSIONS = CommandPermissions.of(ROOTS, TYPES);
 
     /**
-     * Word cap on a free-form argument that shares a command with a flag.
+     * How many words a free-form argument followed by a flag reads.
      *
-     * <p>Lamp gives the last parameter the rest of the input, and flags have to be last, so a query
-     * and {@code --page} cannot both be greedy. A capped list is non-greedy at registration and
-     * still consumes every remaining word at parse time.</p>
+     * <p>Lamp only allows a greedy parameter last. A capped list counts as not greedy.</p>
      */
     public static final int MAX_WORDS = 12;
 
@@ -75,7 +73,7 @@ public final class Commands {
     }
 
     /**
-     * @return every subcommand under every root, for Lamp to register
+     * @return the registrations for Lamp
      */
     public List<OrphanRegistry> registries() {
 

@@ -32,8 +32,8 @@ public final class ListCommand implements OrphanCommand {
         this.screens = screens;
     }
 
-    // Four switches at most. Past four, Lamp's Brigadier tree only chains them in declaration order,
-    // so the client stops suggesting, and marks as wrong, any switch typed after a later one.
+    // Four switches at most. Lamp chains more than four in declaration order. The client then
+    // rejects a switch typed after a later one.
     @Subcommand("list")
     @Description("Managed plugins")
     @RequiresPermission("command.list")
@@ -43,8 +43,7 @@ public final class ListCommand implements OrphanCommand {
                      @Switch("held") boolean held,
                      @Switch(value = "untracked", shorthand = 'n') boolean untracked) {
 
-        // A button on the list only changes the filters, so the answer from Modrinth it already
-        // showed is still the current one.
+        // A filter button reuses the last answer from Modrinth.
         boolean refresh = !(Screen.parse(context.take(viewer)) instanceof Screen.ListScreen);
 
         Set<ListFilter> filters = EnumSet.noneOf(ListFilter.class);

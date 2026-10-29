@@ -16,10 +16,10 @@ import java.time.Instant;
 @Accessors(fluent = true)
 public final class TrashEntry {
 
-    /** The name the jar had in the plugins folder, which is where a restore puts it back. */
+    /** The name the jar had in the plugins folder. A restore uses it. */
     private String fileName;
 
-    /** The name of the jar inside the trash directory, unique per removal. */
+    /** The name of the jar inside the trash directory. Unique per removal. */
     private String storedAs;
 
     private String projectId;
@@ -31,7 +31,7 @@ public final class TrashEntry {
     private Instant datePublished;
     private String sha512;
 
-    /** The channel the plugin was following, so restoring it does not silently reset the setting. */
+    /** The channel the plugin was following. */
     private ReleaseChannel channel;
 
     private String removedBy;
@@ -43,8 +43,8 @@ public final class TrashEntry {
     private TrackedPlugin plugin;
 
     /**
-     * What to call this on screen: the Modrinth title when it is known, and the file name when the
-     * jar was never tracked or its metadata was lost.
+     * The Modrinth title, or the file name when the jar was never tracked or its metadata was
+     * lost.
      *
      * @return a name that is never null
      */

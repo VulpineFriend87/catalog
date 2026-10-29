@@ -1,12 +1,12 @@
 package top.vulpine.catalog.command.navigation;
 
 /**
- * Everything a button carries besides its command.
+ * The payload of a button besides its command.
  *
  * @param screen    the trail of the screen the button was pressed on, or null when it was not
  *                  offered from a screen
  * @param confirmed whether this press is the answer to a confirmation
- * @param answer    {@link ClickContext#ALONE}, or null for the default of installing what is needed
+ * @param answer    {@link ClickContext#ALONE}, or null to install what is required
  */
 public record Press(String screen, boolean confirmed, String answer) {
 
@@ -79,7 +79,7 @@ public record Press(String screen, boolean confirmed, String answer) {
     }
 
     /**
-     * @return this press, as the confirmation of the question it raised
+     * @return this press as the answer to its confirmation
      */
     public Press confirming() {
         return new Press(screen, true, answer);
@@ -87,14 +87,14 @@ public record Press(String screen, boolean confirmed, String answer) {
 
     /**
      * @param answer what was chosen on the confirmation screen
-     * @return this press, carrying that answer
+     * @return this press with that answer
      */
     public Press answering(String answer) {
         return new Press(screen, confirmed, answer);
     }
 
     /**
-     * @return the payload, in the form {@link #of} reads back
+     * @return the payload {@link #of} reads back
      */
     public String data() {
         return (confirmed ? ClickContext.CONFIRM : "")

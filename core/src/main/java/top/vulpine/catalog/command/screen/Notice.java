@@ -3,14 +3,14 @@ package top.vulpine.catalog.command.screen;
 import java.util.List;
 
 /**
- * One fact the join message can state, with the plugins it is about.
+ * One fact the join message states and the plugins it is about.
  */
 public record Notice(Kind kind, List<Item> plugins) {
 
     /**
-     * @param name         what the plugin is called, shown on the line
-     * @param detail       the builds involved, shown on hover, or null
-     * @param reason       why it did not happen, shown on hover, or null
+     * @param name         the plugin's name
+     * @param detail       the builds involved for the hover, or null
+     * @param reason       why it did not happen for the hover, or null
      * @param rollback     the command that rolls it back, or null when there is nothing to return to
      * @param rollbackTo   the build a rollback returns to
      * @param rollbackGone whether that build was removed from Modrinth

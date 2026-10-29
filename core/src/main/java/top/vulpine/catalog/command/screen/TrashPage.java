@@ -1,9 +1,8 @@
 package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.TextDecoration;
+import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.trash.model.TrashEntry;
@@ -29,19 +28,16 @@ public final class TrashPage {
     /**
      * What has been removed and can still be restored.
      *
-     * <p>Ordered by when it was removed rather than by name: the thing somebody wants back is
-     * almost always the last thing they got rid of.</p>
+     * <p>Newest removal first.</p>
      */
     public static List<Component> trash(List<TrashEntry> entries, int retentionDays, int page) {
 
-        int pages = Math.max((entries.size() + BIN - 1) / BIN, 1);
-        int shown = Math.min(Math.max(page, 1), pages);
-        int first = (shown - 1) * BIN;
+        Pager pager = Pager.of(entries.size(), BIN, page);
 
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Trash", BRAND).decorate(TextDecoration.BOLD))
+                .append(title("Trash", BRAND))
                 .append(Component.text("  " + entries.size(), TEXT))
                 .append(Component.text(" removed", MUTED))
                 .build());
@@ -58,33 +54,17 @@ public final class TrashPage {
 
         out.add(Component.empty());
 
-        for (TrashEntry entry : entries.subList(first, Math.min(first + BIN, entries.size()))) {
+        for (TrashEntry entry : pager.slice(entries)) {
             out.add(trashRow(entry));
         }
 
         out.add(Component.empty());
 
-        TextComponent.Builder footer = line()
-                .append(Component.text(INDENT + "page ", MUTED))
-                .append(Component.text(shown, TEXT))
-                .append(Component.text(" of " + pages + "  ", MUTED));
-
-        if (shown > 1) {
-            footer.append(button("Newer »", "/catalog trash --page " + (shown - 1), MUTED,
-                    "Page " + (shown - 1))).append(Component.space());
-        }
-
-        if (shown < pages) {
-            footer.append(button("« Older", "/catalog trash --page " + (shown + 1), MUTED,
-                    "Page " + (shown + 1))).append(Component.space());
-        }
-
-        footer.append(button("Empty", from("/catalog trash delete all", new Screen.TrashScreen().token()),
-                        DANGER, "Delete everything in the trash"))
-                .append(Component.space())
-                .append(button("Plugins", "/catalog list", MUTED, "Back to the plugin list"));
-
-        out.add(footer.build());
+        out.add(pager.footer(List.of(
+                        button("Empty", from("/catalog trash delete all", new Screen.TrashScreen().token()),
+                                DANGER, "Delete everything in the trash"),
+                        button("Plugins", "/catalog list", MUTED, "Back to the plugin list")),
+                "Newer", "Older", shown -> "/catalog trash --page " + shown));
 
         return out;
     }
@@ -129,7 +109,7 @@ public final class TrashPage {
         List<Component> out = new ArrayList<>();
 
         out.add(line()
-                .append(Component.text("Empty the trash", DANGER).decorate(TextDecoration.BOLD))
+                .append(title("Empty the trash", DANGER))
                 .build());
 
         out.add(line()

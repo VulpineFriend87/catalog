@@ -40,8 +40,7 @@ class PlatformFloorTest {
     }
 
     /**
-     * Paper moved from 1.21 to 26. Ordering these as text puts 26 before 1.18, which would refuse
-     * to start on every current server.
+     * Paper moved from 1.21 to 26. As text 26 sorts before 1.18.
      */
     @Test
     @DisplayName("the new numbering is accepted")

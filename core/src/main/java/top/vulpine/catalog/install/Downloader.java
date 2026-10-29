@@ -1,5 +1,6 @@
 package top.vulpine.catalog.install;
 
+import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.hash.Hashing;
 import top.vulpine.catalog.jar.JarInspector;
 import top.vulpine.catalog.jar.model.PluginDescriptor;
@@ -15,20 +16,16 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 /**
- * Fetches a version's jar into staging and refuses to hand it back unless it is sound.
+ * Downloads a version's jar into staging and verifies it.
  *
- * <p>Nothing downloaded here ever lands in the plugins folder directly. A file reaches staging,
- * gets checked, and only then does a caller move it into place — so a truncated download or a
- * mirror serving the wrong bytes cannot become a plugin that fails to load at boot.</p>
+ * <p>A caller moves it into place.</p>
  *
- * <p>Two things are checked, and they answer different questions. The hash and size answer
- * <em>did we get the file Modrinth meant</em>. The bytecode version answers <em>can this JVM run
- * it</em>, which Modrinth cannot tell us at all: no project declares its required Java version, so
- * the only honest source is the class files themselves.</p>
+ * <p>The hash and size must match the file Modrinth lists. The bytecode version must run on
+ * this JVM.</p>
  */
 public final class Downloader {
 
-    /** Class file major version 52 is Java 8, and every release since is one more. */
+    /** Class file major version 52 is Java 8. Every release since adds one. */
     private static final int JAVA_8_BYTECODE = 52;
 
     private final ModrinthClient modrinth;
@@ -36,7 +33,7 @@ public final class Downloader {
 
     /**
      * @param modrinth the client to download through
-     * @param staging  a directory Catalog owns, emptied on startup
+     * @param staging  a directory Catalog owns and empties on startup
      */
     public Downloader(ModrinthClient modrinth, Path staging) {
         this.modrinth = modrinth;
@@ -50,7 +47,7 @@ public final class Downloader {
      *
      * @param version     the version to fetch
      * @param javaFeature the Java feature release this server runs on
-     * @return the staged file, verified
+     * @return the verified staged file
      * @throws InstallException if the file is missing, corrupt, or too new for this JVM
      */
     public Path fetch(ModrinthVersion version, int javaFeature) {
@@ -62,7 +59,7 @@ public final class Downloader {
                     + version.versionNumber() + ".");
         }
 
-        // The name becomes a path here, in the update folder and in the plugins folder.
+        // The name becomes a path in the update folder and in the plugins folder.
         if (!isPlainJarName(file.filename())) {
             throw new InstallException("The file Modrinth lists for " + version.versionNumber()
                     + " is not a plain jar name. Not downloaded.");
@@ -78,7 +75,7 @@ public final class Downloader {
         try {
             modrinth.download(file.url(), target).join();
         } catch (Exception e) {
-            throw new InstallException("Download failed: " + rootMessage(e), e);
+            throw new InstallException("Download failed: " + Errors.rootMessage(e), e);
         }
 
         try {
@@ -93,7 +90,7 @@ public final class Downloader {
     }
 
     /**
-     * A file name with no folder in it, that is not hidden and ends in {@code .jar}.
+     * A file name with no folder that is not hidden and ends in {@code .jar}.
      */
     static boolean isPlainJarName(String name) {
 
@@ -116,7 +113,7 @@ public final class Downloader {
     /**
      * Empties the staging directory.
      *
-     * <p>Anything still in here is the remains of a download that was interrupted.</p>
+     * <p>Anything left there is from an interrupted download.</p>
      */
     public void clean() {
 
@@ -183,17 +180,6 @@ public final class Downloader {
         } catch (IOException ignored) {
             // Staging is emptied on the next startup anyway.
         }
-    }
-
-    private static String rootMessage(Throwable error) {
-
-        Throwable cause = error;
-
-        while (cause.getCause() != null && cause.getMessage() == null) {
-            cause = cause.getCause();
-        }
-
-        return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
     }
 
 }

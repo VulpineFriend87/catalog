@@ -32,7 +32,7 @@ class UpdateCheckerTest {
 
     private TrackingStore store;
 
-    /** What Modrinth holds, per installed hash. */
+    /** What Modrinth holds per installed hash. */
     private final Map<String, List<ModrinthVersion>> catalogue = new HashMap<>();
 
     private final List<Ask> asked = new ArrayList<>();
@@ -59,8 +59,8 @@ class UpdateCheckerTest {
     }
 
     /**
-     * Behaves like the update endpoint: filters by loader and game version, then returns the
-     * newest of what is left.
+     * Behaves like the update endpoint: filters by loader and game version and returns the newest
+     * of the rest.
      */
     private UpdateChecker checker() {
 
@@ -87,8 +87,7 @@ class UpdateCheckerTest {
     @DisplayName("only this exact game version is ever asked for")
     void asksForTheExactVersionOnly() {
 
-        // A build published for 26.1 does not run here as far as anyone has declared, and Catalog
-        // does not decide otherwise on the author's behalf.
+        // A build published for 26.1 is not declared for this server.
         tracked("A", "hash-a",
                 versionFor("v1", "1.0", "2026-01-01T00:00:00Z", "26.1.4"),
                 versionFor("v2", "2.0", "2026-06-01T00:00:00Z", "26.1", "26.1.1"));
@@ -144,7 +143,7 @@ class UpdateCheckerTest {
                 """.formatted(id, number, published, tags), ModrinthVersion.class);
     }
 
-    /** Tracks a plugin at the given version, and says what Modrinth holds for that project. */
+    /** Tracks a plugin at the given version and says what Modrinth holds for that project. */
     private TrackedPlugin tracked(String projectId, String hash, ModrinthVersion installed,
                                   ModrinthVersion... available) {
 
@@ -187,8 +186,7 @@ class UpdateCheckerTest {
     @DisplayName("an older build is never offered, even when Modrinth returns one")
     void refusesDowngrades() {
 
-        // Narrowing to one game version can make the newest compatible build older than what is
-        // installed, which is how an operator on an older Minecraft version gets offered a rollback.
+        // The newest build for one game version can be older than the installed one.
         tracked("A", "hash-a",
                 version("v2", "2.0", "2026-06-01T00:00:00Z"),
                 version("v1", "1.0", "2026-01-01T00:00:00Z"));
@@ -231,8 +229,7 @@ class UpdateCheckerTest {
     @DisplayName("a build for the exact server software beats a newer one for its parent")
     void prefersTheForkOverItsParent() {
 
-        // A plugin written against the Purpur API and also published for Paper must resolve to the
-        // Purpur build on a Purpur server, no matter which was uploaded last.
+        // A plugin published for Purpur and Paper resolves to the Purpur build on a Purpur server.
         ModrinthVersion purpurBuild = version("purpur-20", "2.0", "2026-06-01T00:00:00Z", "purpur");
         ModrinthVersion paperBuild = version("paper-20", "2.0", "2026-06-02T00:00:00Z", "paper");
 

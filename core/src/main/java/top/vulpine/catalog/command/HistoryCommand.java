@@ -59,8 +59,7 @@ public final class HistoryCommand implements OrphanCommand {
 
             if (which != null && !which.isBlank()) {
 
-                // Resolved against the log rather than the tracking file, so a plugin that has
-                // since been removed can still be looked up.
+                // The log still knows plugins that have been removed.
                 projectId = catalog.loggedProjectId(which);
 
                 if (projectId == null) {

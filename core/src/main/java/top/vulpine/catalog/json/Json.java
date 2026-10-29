@@ -8,13 +8,18 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 
 /**
- * The single JSON policy for the whole core.
+ * The Gson instance core uses.
  *
- * <p>Deliberately limited to Gson 2.8 features. The runtime Gson is whichever one the server bundles.</p>
+ * <p>Uses only Gson 2.8 features. The server's bundled Gson runs it.</p>
  */
 public final class Json {
 
@@ -37,9 +42,23 @@ public final class Json {
     }
 
     /**
+     * Writes a value to a temporary file and moves it over {@code file}.
+     *
+     * @param type the type to serialize the value as
+     */
+    public static void write(Path file, Object value, Type type) throws IOException {
+
+        Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
+
+        Files.createDirectories(file.getParent());
+        Files.writeString(temporary, GSON.toJson(value, type), StandardCharsets.UTF_8);
+        Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
      * Reads the ISO-8601 timestamps Modrinth returns.
      *
-     * <p>Parsed as an offset date-time because the API is not consistent with writing {@code Z} versus an explicit {@code +00:00}.</p>
+     * <p>Accepts both {@code Z} and {@code +00:00}.</p>
      */
     private static final class InstantAdapter extends TypeAdapter<Instant> {
 

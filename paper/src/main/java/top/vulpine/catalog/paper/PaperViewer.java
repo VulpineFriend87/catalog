@@ -12,7 +12,7 @@ import revxrsal.commands.process.SenderResolver;
 import top.vulpine.catalog.platform.Viewer;
 
 /**
- * A Bukkit sender as Catalog's screens see it.
+ * The {@link Viewer} of a Bukkit command sender.
  */
 public final class PaperViewer implements Viewer {
 

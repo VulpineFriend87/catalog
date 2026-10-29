@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The permission each command needs, read from its {@link RequiresPermission} annotation.
+ * The {@link RequiresPermission} node of each command.
  */
 public final class CommandPermissions {
 
@@ -76,8 +76,8 @@ public final class CommandPermissions {
     }
 
     /**
-     * @param command a command line, wrapped by a button or not
-     * @return the node it needs, relative to {@code catalog}, or null when it is not one of these
+     * @param command a command line with or without the button wrapper
+     * @return the node below {@code catalog} it needs, or null when it is not a Catalog command
      */
     public String nodeFor(String command) {
 

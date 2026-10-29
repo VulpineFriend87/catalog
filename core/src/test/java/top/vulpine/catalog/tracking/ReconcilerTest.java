@@ -65,7 +65,7 @@ class ReconcilerTest {
                 """.formatted(versionId, projectId), ModrinthVersion.class);
     }
 
-    /** Adds a jar to the pretend plugins folder, and says what Modrinth makes of it. */
+    /** Adds a jar to the pretend plugins folder and says what Modrinth makes of it. */
     private InstalledJar onDisk(String fileName, String hash, String pluginName, ModrinthVersion known) {
 
         PluginDescriptor descriptor = PluginDescriptor.builder()
@@ -157,8 +157,7 @@ class ReconcilerTest {
     @DisplayName("a staged update landing is an update, not a manual replacement")
     void clearsTheFlagWhenAnUpdateLands() {
 
-        // The jar Catalog put in the update folder is now the jar in the plugins folder. Read as a
-        // manual swap it would stay marked staged forever, because nothing else ever clears it.
+        // The jar Catalog put in the update folder is now the jar in the plugins folder.
         TrackedPlugin staged = TrackedPlugin.of(version("v1", "PROJ-A"), "LuckPerms.jar",
                 "old-hash", ReleaseChannel.RELEASE, "test");
         staged.pendingRestart(true);
@@ -230,8 +229,7 @@ class ReconcilerTest {
     @DisplayName("a jar renamed and updated in the same downtime is still the same plugin")
     void survivesRenameAndUpdateTogether() {
 
-        // Neither clue survives: the contents changed, so the hash misses, and the file is not
-        // where it was, so the name misses. Only the project id is left, and it is enough.
+        // The contents and the file name both changed. Only the project id is left.
         TrackedPlugin tracked = TrackedPlugin.of(version("v1", "PROJ-A"), "LuckPerms-5.4.jar",
                 "hash-old", ReleaseChannel.RELEASE, "test");
         tracked.autoUpdate(true);
@@ -257,8 +255,8 @@ class ReconcilerTest {
     @DisplayName("an exact match always wins the jar over a merely same-project one")
     void exactMatchOutranksTheProjectId() {
 
-        // If the project id were tried plugin by plugin, whichever was looked at first could take
-        // the jar the other owns byte for byte, and that one would then look uninstalled.
+        // The project id must not be tried plugin by plugin. The first could take the jar the other
+        // owns byte for byte.
         TrackedPlugin renamed = TrackedPlugin.of(version("v1", "PROJ-A"), "gone.jar", "hash-old",
                 ReleaseChannel.RELEASE, "test");
         store.put(renamed);

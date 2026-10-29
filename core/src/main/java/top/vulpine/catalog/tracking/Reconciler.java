@@ -14,14 +14,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Brings the tracking state in line with what is actually on the disk.
+ * Reconciles the tracking file with the plugins folder.
  *
- * <p>Deliberately free of I/O. The caller does the scanning and the one bulk call to Modrinth and
- * passes both results in, which keeps every branch below testable without a network or a disk.</p>
+ * <p>Free of I/O. The caller does the scan and the bulk call to Modrinth and passes both in.</p>
  */
 public final class Reconciler {
 
-    /** Recorded as the installer for plugins adopted by the scan rather than by a person. */
+    /** Recorded as the installer of plugins the scan adopts. */
     public static final String AUTO_TRACK = "auto-track";
 
     private final TrackingStore store;
@@ -45,12 +44,12 @@ public final class Reconciler {
     }
 
     /**
-     * Reconciles the store against a scan, mutating the store in place.
+     * Reconciles the store against a scan in place.
      *
-     * <p>The caller is responsible for saving afterward.</p>
+     * <p>The caller saves.</p>
      *
      * @param scan       what the plugins folder holds right now
-     * @param identified hash to a Modrinth version, from a bulk lookup of every hash in the scan
+     * @param identified hash to Modrinth version for every hash in the scan
      * @return what changed
      */
     public ReconcileReport reconcile(ScanResult scan, Map<String, ModrinthVersion> identified) {
@@ -65,9 +64,8 @@ public final class Reconciler {
         Set<String> claimed = new HashSet<>();
         List<TrackedPlugin> unsettled = new ArrayList<>();
 
-        // Two rounds, because the strong evidence has to win everywhere before the weak evidence is
-        // used anywhere. Settled one plugin at a time, the first to be looked at could claim a jar
-        // that a later one owns byte for byte, and that later one would then look deleted.
+        // Two rounds. Exact matches are settled for every plugin before any weaker match is tried.
+        // Otherwise one plugin could claim a jar another owns byte for byte.
         for (TrackedPlugin tracked : store.all()) {
 
             TrackedPlugin left = settle(tracked, scan, identified, claimed, changes);
@@ -129,7 +127,7 @@ public final class Reconciler {
                 .build();
     }
 
-    /** What became of the plugins already tracked, gathered as each one is settled. */
+    /** What became of the plugins already tracked. */
     private static final class Changes {
 
         private final List<TrackedPlugin> moved = new ArrayList<>();
@@ -160,14 +158,13 @@ public final class Reconciler {
                 changes.renamed.add(tracked);
             }
 
-            // Byte for byte what was here before a restart was supposed to replace it. The
-            // server did not take the file from the update folder, and the staged build is still
-            // waiting, so the flag stays set and somebody is told.
+            // The same bytes as before the restart that should have replaced them. The staged
+            // build is still waiting. The flag stays set and the update is reported as not applied.
             if (tracked.pendingRestart()) {
                 changes.notApplied.add(tracked);
             }
 
-            // A fresh install is a different case entirely: the jar was always the right one.
+            // A fresh install's jar was always the right one.
             if (tracked.pendingLoad()) {
                 changes.loaded.add(tracked);
             }
@@ -202,24 +199,17 @@ public final class Reconciler {
             return null;
         }
 
-        // The file now holds something else entirely. The name is left unclaimed, so whatever
-        // actually lives there can be adopted, and the plugin goes to the second round in case it
-        // is still on disk somewhere under a name nobody has looked at yet.
+        // The file now holds something else. The file name is left to the jar now there.
+        // The plugin goes to the second round in case it is on disk under another name.
         return tracked;
     }
 
     /**
-     * Last resort: find the plugin by the only thing a rename and a new version both leave alone.
+     * Last resort: finds the plugin by its Modrinth project id.
      *
-     * <p>Reached when neither the contents nor the file name led anywhere, which is what happens
-     * when both changed at once — the jar was replaced and renamed in the same downtime. The
-     * Modrinth project id survives that and needs no second opinion: matching it <em>is</em> the
-     * proof that this is the same plugin, where a file name or a declared name would still have to
-     * be checked against something.</p>
-     *
-     * <p>Only jars nobody else claimed are considered, so this can never take a jar away from a
-     * plugin that matched it exactly. If two are left over for the same project, the first is taken
-     * and the other falls through to be reported as a duplicate.</p>
+     * <p>Reached when both the contents and the file name changed. Only jars nobody else claimed are
+     * considered. If two are left over for the same project, the first is taken and the other is
+     * reported as a duplicate.</p>
      */
     private void settleByProject(TrackedPlugin tracked, ScanResult scan,
                                  Map<String, ModrinthVersion> identified, Set<String> claimed,

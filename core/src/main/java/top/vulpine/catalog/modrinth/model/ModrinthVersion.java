@@ -48,7 +48,7 @@ public final class ModrinthVersion {
     /**
      * Every file other than the primary one.
      *
-     * @return the non-primary files, never null
+     * @return the non-primary files, or an empty list
      */
     public List<VersionFile> extraFiles() {
 
@@ -67,7 +67,7 @@ public final class ModrinthVersion {
      * Dependencies of the given kind.
      *
      * @param type the relationship to filter by
-     * @return the matching dependencies, never null
+     * @return the matching dependencies, or an empty list
      */
     public List<Dependency> dependenciesOf(DependencyType type) {
 

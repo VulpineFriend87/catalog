@@ -45,7 +45,7 @@ class AutoUpdatePolicyTest {
     @DisplayName("a build published minutes ago is left alone")
     void waitsOutTheSoakWindow() {
 
-        // The whole point: an author who hotfixes an hour later should never have caught anyone.
+        // A hotfix published within the window replaces the build before it is installed.
         UpdateCandidate candidate = candidate(plugin(true, TrackedPlugin.INHERIT_SOAK),
                 "2026-09-03T11:40:00Z");
 

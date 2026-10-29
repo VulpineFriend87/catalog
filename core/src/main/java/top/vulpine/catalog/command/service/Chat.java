@@ -14,7 +14,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Sending screens, and running the work behind them off the main thread.
+ * Sends screens and runs command work off the main thread.
  */
 public final class Chat {
 
@@ -34,7 +34,7 @@ public final class Chat {
     }
 
     /**
-     * Runs a command's work off the main thread, with a notice once it takes {@link #PATIENCE}.
+     * Runs a command's work off the main thread. A notice follows once it takes {@link #PATIENCE}.
      */
     public void runAsync(Viewer viewer, Runnable work) {
 
@@ -70,20 +70,6 @@ public final class Chat {
 
     public static void send(Viewer viewer, Component line) {
         send(viewer, List.of(line));
-    }
-
-    /**
-     * @return the message of the first cause that has one
-     */
-    public static String rootMessage(Throwable error) {
-
-        Throwable cause = error;
-
-        while (cause.getCause() != null && cause.getMessage() == null) {
-            cause = cause.getCause();
-        }
-
-        return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
     }
 
 }

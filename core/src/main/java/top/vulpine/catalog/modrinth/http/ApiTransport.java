@@ -22,11 +22,11 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Everything about how a request is sent.
+ * Sends requests to the Modrinth API.
  *
- * <p>Rate limiting, conditional requests, back-off, threading, and JSON decoding all live here.</p>
+ * <p>Handles rate limiting, conditional requests, back-off and JSON decoding.</p>
  *
- * <p>Every method returns a future, and every request runs on this transport's own executor.</p>
+ * <p>Every method returns a future. Every request runs on this transport's own executor.</p>
  */
 public final class ApiTransport implements AutoCloseable {
 
@@ -34,7 +34,7 @@ public final class ApiTransport implements AutoCloseable {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DOWNLOAD_TIMEOUT = Duration.ofMinutes(5);
 
-    /** Seconds to wait when Modrinth answers 429 without telling us how long. */
+    /** Seconds to wait when Modrinth answers 429 without a Retry-After header. */
     private static final long DEFAULT_BACK_OFF = 10L;
 
     private final HttpClient http;
@@ -70,10 +70,10 @@ public final class ApiTransport implements AutoCloseable {
     }
 
     /**
-     * Performs a GET and decodes the body, reusing a cached response when the server reports it is
+     * Performs a GET and decodes the body. A cached response is reused when the server reports it
      * unchanged.
      *
-     * @param path the path below the API root, query string included
+     * @param path the path below the API root with the query string
      * @param type the type to decode into
      * @param <T>  the decoded type
      * @return a future of the decoded body
@@ -112,8 +112,7 @@ public final class ApiTransport implements AutoCloseable {
     /**
      * Performs a POST with a JSON body and decodes the reply.
      *
-     * <p>Not cached: the bulk endpoints are POSTs precisely because their input is too large for a
-     * URL, and a conditional request keyed on a URL cannot express that.</p>
+     * <p>Not cached.</p>
      *
      * @param path the path below the API root
      * @param body the request body
@@ -140,11 +139,9 @@ public final class ApiTransport implements AutoCloseable {
     /**
      * Downloads a file to disk.
      *
-     * <p>Written to a sibling temporary file and moved into place, so an interrupted download never
-     * leaves a half-written jar somewhere that might pick it up. CDN downloads deliberately skip the
-     * rate limiter, which exists to protect the API budget.</p>
+     * <p>Written to a temporary file and moved into place. Skips the rate limiter.</p>
      *
-     * @param url    the absolute file URL, as given by Modrinth
+     * @param url    the absolute file URL Modrinth gave
      * @param target where to write it
      * @return a future of the written file
      */
@@ -190,8 +187,8 @@ public final class ApiTransport implements AutoCloseable {
     }
 
     /**
-     * Sends a prepared request, honoring the rate limiter and retrying once if Modrinth asks to
-     * slow down.
+     * Sends a prepared request through the rate limiter. Retries once if Modrinth asks to slow
+     * down.
      */
     private HttpResponse<String> send(HttpRequest.Builder builder, String url) {
 
