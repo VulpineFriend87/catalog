@@ -36,6 +36,7 @@ import top.vulpine.catalog.update.Updates;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 import top.vulpine.commons.log.Logger;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -91,6 +92,8 @@ public final class Catalog {
      */
     public boolean start() {
 
+        banner();
+
         Path data = platform.dataFolder();
 
         this.modrinth = ModrinthClient.builder()
@@ -124,7 +127,7 @@ public final class Catalog {
         this.dependents = new Dependents(tracking, hashes -> modrinth.identify(hashes).join());
         this.enableCheck = new EnableCheck(platform, library, history, modrinth);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(exitTasks::run, "Catalog exit tasks"));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::exit, "Catalog exit tasks"));
 
         platform.async(this::index);
         platform.async(this::pruneTrash);
@@ -138,6 +141,46 @@ public final class Catalog {
         if (modrinth != null) {
             modrinth.close();
         }
+    }
+
+    private void banner() {
+
+        String[] banner = {
+                "",
+                "<light_purple>    ┏┓     ┓",
+                "<light_purple>    ┃ ┏┓╋┏┓┃┏┓┏┓",
+                "<light_purple>    ┗┛┗┻┗┗┻┗┗┛┗┫",
+                "<light_purple>               ┛",
+                "",
+                "<white>    By <light_purple>" + String.join(", ", platform.authors()),
+                "<white>    Version: <light_purple>" + platform.version(),
+                ""
+        };
+
+        for (String line : banner) {
+            Logger.system(line);
+        }
+    }
+
+    /**
+     * Queues the builds waiting at {@link Platform#stagedAtExit} over their jars and runs the exit
+     * tasks.
+     */
+    private void exit() {
+
+        Path folder = platform.pluginsFolder();
+
+        for (TrackedPlugin plugin : tracking.pendingRestart()) {
+
+            Path staged = plugin.stagedAs() == null ? null : platform.stagedAtExit(plugin.stagedAs());
+
+            if (staged != null && Files.exists(staged)) {
+                exitTasks.replace(staged, folder.resolve(plugin.fileName()),
+                        folder.resolve(plugin.stagedAs()));
+            }
+        }
+
+        exitTasks.run();
     }
 
     private boolean loadState(Path data) {

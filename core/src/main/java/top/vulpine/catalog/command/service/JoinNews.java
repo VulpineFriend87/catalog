@@ -8,6 +8,7 @@ import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -16,6 +17,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 
 import static top.vulpine.catalog.command.service.Chat.send;
 
@@ -25,6 +27,12 @@ import static top.vulpine.catalog.command.service.Chat.send;
  * <p>Open updates are repeated on every join. What the last start did is told once per viewer.</p>
  */
 public final class JoinNews {
+
+    /** How long after a join the notice is sent. */
+    private static final Duration DELAY = Duration.ofSeconds(3);
+
+    /** How many times to wait for the first update check before giving up on a join. */
+    private static final int ATTEMPTS = 10;
 
     private final Catalog catalog;
 
@@ -38,16 +46,43 @@ public final class JoinNews {
     }
 
     /**
-     * @return false until the first update check has answered
+     * Sends the join notice shortly after a viewer joins. Waits for the first update check.
+     *
+     * @param online whether the viewer is still connected
      */
-    public boolean ready() {
-        return catalog.getUpdates().checkedAt() != null;
+    public void greet(Viewer viewer, BooleanSupplier online) {
+
+        if (catalog.getConfiguration().get().updates.notifyOnJoin && viewer.has("notify")) {
+            greet(viewer, online, ATTEMPTS);
+        }
+    }
+
+    private void greet(Viewer viewer, BooleanSupplier online, int attempts) {
+
+        catalog.getPlatform().later(() -> {
+
+            if (!online.getAsBoolean()) {
+                return;
+            }
+
+            // No answer before the first check.
+            if (catalog.getUpdates().checkedAt() == null) {
+
+                if (attempts > 1) {
+                    greet(viewer, online, attempts - 1);
+                }
+
+                return;
+            }
+
+            tell(viewer);
+        }, DELAY);
     }
 
     /**
      * Sends what this viewer has not heard yet.
      */
-    public void tell(Viewer viewer) {
+    private void tell(Viewer viewer) {
 
         Set<String> heardBefore = heard.computeIfAbsent(viewer.name(), name -> ConcurrentHashMap.newKeySet());
         Set<String> news = new HashSet<>();
@@ -58,7 +93,8 @@ public final class JoinNews {
             return;
         }
 
-        send(viewer, JoinNotice.notice(notices, hasAvailable(notices)));
+        send(viewer, JoinNotice.notice(notices, hasAvailable(notices),
+                catalog.getPlatform().target().platform().isProxy()));
         heardBefore.addAll(news);
     }
 

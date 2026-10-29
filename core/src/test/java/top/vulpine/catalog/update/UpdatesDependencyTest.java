@@ -112,6 +112,11 @@ class UpdatesDependencyTest {
         }
 
         @Override
+        public void later(Runnable task, Duration delay) {
+            task.run();
+        }
+
+        @Override
         public void repeat(Runnable task, Duration period) {
         }
 

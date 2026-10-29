@@ -57,6 +57,16 @@ public interface Platform {
     boolean cancelStaged(String fileName);
 
     /**
+     * Where a build waits when Catalog moves it over the installed jar as the JVM exits.
+     *
+     * @param fileName the name it was staged under
+     * @return the staged file, or null when the platform applies staged builds itself
+     */
+    default Path stagedAtExit(String fileName) {
+        return null;
+    }
+
+    /**
      * @param jar a jar in the plugins folder
      * @return true if a plugin loaded from it is enabled right now
      */
@@ -99,6 +109,11 @@ public interface Platform {
      * Runs a task off the main thread.
      */
     void async(Runnable task);
+
+    /**
+     * Runs a task off the main thread after {@code delay}.
+     */
+    void later(Runnable task, Duration delay);
 
     /**
      * Runs a task off the main thread every {@code period}.

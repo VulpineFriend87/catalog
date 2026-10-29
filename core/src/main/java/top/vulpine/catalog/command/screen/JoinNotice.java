@@ -33,13 +33,15 @@ public final class JoinNotice {
      * One row per fact in order of urgency. The buttons come last.
      *
      * @param updatable whether there is anything Update all would download
+     * @param proxy     whether the notice is about the proxy
      */
-    public static List<Component> notice(List<Notice> notices, boolean updatable) {
+    public static List<Component> notice(List<Notice> notices, boolean updatable, boolean proxy) {
 
         List<Component> out = new ArrayList<>();
 
         out.add(line()
                 .append(title("Catalog", BRAND))
+                .append(proxy ? Component.text(" · proxy", BRAND) : Component.empty())
                 .append(Component.text("  updates", MUTED))
                 .build());
 

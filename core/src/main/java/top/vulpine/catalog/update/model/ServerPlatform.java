@@ -73,4 +73,8 @@ public enum ServerPlatform {
         return declared != null && declared.contains(id());
     }
 
+    public boolean isProxy() {
+        return this == VELOCITY;
+    }
+
 }

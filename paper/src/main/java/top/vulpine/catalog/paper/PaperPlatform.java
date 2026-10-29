@@ -192,6 +192,11 @@ public final class PaperPlatform implements Platform {
     }
 
     @Override
+    public void later(Runnable task, Duration delay) {
+        scheduler.runLaterAsync(task, delay.toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    @Override
     public void repeat(Runnable task, Duration period) {
         scheduler.runTimerAsync(task, period.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS);
     }

@@ -75,22 +75,6 @@ public final class CatalogPaper extends JavaPlugin {
         Logger.debug(CatalogAction.SETUP, "Scheduling through FoliaLib, detected platform: "
                 + foliaLib.getImplType() + ".");
 
-        String[] banner = {
-                "",
-                "<light_purple>    ┏┓     ┓",
-                "<light_purple>    ┃ ┏┓╋┏┓┃┏┓┏┓",
-                "<light_purple>    ┗┛┗┻┗┗┻┗┗┛┗┫",
-                "<light_purple>               ┛",
-                "",
-                "<white>    By <light_purple>" + String.join(", ", getDescription().getAuthors()),
-                "<white>    Version: <light_purple>" + getDescription().getVersion(),
-                ""
-        };
-
-        for (String line : banner) {
-            Logger.system(line);
-        }
-
         this.catalog = new Catalog(new PaperPlatform(this, foliaLib.getScheduler(), getFile().toPath(),
                 this::loadConfiguration),
                 () -> configuration);
@@ -113,7 +97,7 @@ public final class CatalogPaper extends JavaPlugin {
         clicks.dispatcher((actor, line) -> lamp.dispatch((BukkitCommandActor) actor, line));
 
         getServer().getPluginManager().registerEvents(new ServerStarted(catalog.getEnableCheck()), this);
-        getServer().getPluginManager().registerEvents(new JoinNotifier(this, new JoinNews(catalog)), this);
+        getServer().getPluginManager().registerEvents(new JoinNotifier(new JoinNews(catalog)), this);
 
         Logger.debug(CatalogAction.SETUP, "Initializing metrics...");
         new Metrics(this, PLUGIN_ID);
