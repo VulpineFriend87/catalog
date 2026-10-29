@@ -19,7 +19,6 @@ import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.service.JoinNews;
 import top.vulpine.catalog.config.Config;
-import top.vulpine.catalog.paper.notify.JoinNotifier;
 import top.vulpine.commons.log.LogLevel;
 import top.vulpine.commons.log.Logger;
 import top.vulpine.commons.text.Colorize;

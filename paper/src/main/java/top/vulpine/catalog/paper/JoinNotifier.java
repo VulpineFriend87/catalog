@@ -1,11 +1,10 @@
-package top.vulpine.catalog.paper.notify;
+package top.vulpine.catalog.paper;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import top.vulpine.catalog.command.service.JoinNews;
-import top.vulpine.catalog.paper.PaperViewer;
 
 /**
  * Tells staff about updates when they join.
