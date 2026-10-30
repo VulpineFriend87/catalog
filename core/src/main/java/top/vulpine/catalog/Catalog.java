@@ -211,9 +211,11 @@ public final class Catalog {
                 .publishedAt(Instant.now())
                 .plugins(Inventory.plugins(tracking.all(), updatesByProject()))
                 .untracked(library.untracked().size())
+                .history(history.all())
+                .trash(removals.list())
                 .build();
 
-        network.publish(name, Json.gson().toJson(inventory)).whenComplete((done, error) -> {
+        network.publish(name, Json.compact().toJson(inventory)).whenComplete((done, error) -> {
             if (error != null) {
                 Logger.warn(CatalogAction.NETWORK, "Could not publish " + name + ": " + Errors.rootMessage(error));
             }

@@ -23,11 +23,10 @@ import java.time.OffsetDateTime;
  */
 public final class Json {
 
-    private static final Gson GSON = new GsonBuilder()
-            .setFieldNamingPolicy(com.google.gson.FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-            .setPrettyPrinting()
-            .registerTypeAdapter(Instant.class, new InstantAdapter())
-            .create();
+    private static final Gson GSON = builder().setPrettyPrinting().create();
+
+    /** Without line breaks or indentation. */
+    private static final Gson COMPACT = builder().create();
 
     private Json() {
     }
@@ -39,6 +38,19 @@ public final class Json {
      */
     public static Gson gson() {
         return GSON;
+    }
+
+    /**
+     * The shared Gson instance for JSON nobody reads by hand.
+     */
+    public static Gson compact() {
+        return COMPACT;
+    }
+
+    private static GsonBuilder builder() {
+        return new GsonBuilder()
+                .setFieldNamingPolicy(com.google.gson.FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                .registerTypeAdapter(Instant.class, new InstantAdapter());
     }
 
     /**

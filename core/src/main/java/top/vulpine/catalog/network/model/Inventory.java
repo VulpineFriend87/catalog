@@ -3,8 +3,10 @@ package top.vulpine.catalog.network.model;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.Accessors;
+import top.vulpine.catalog.history.HistoryEntry;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
+import top.vulpine.catalog.trash.model.TrashEntry;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 
 import java.time.Instant;
@@ -38,6 +40,12 @@ public final class Inventory {
 
     /** How many jars Catalog could manage but does not. */
     private int untracked;
+
+    /** What Catalog did. Newest first. */
+    private List<HistoryEntry> history;
+
+    /** What was removed and can still be restored. Newest first. */
+    private List<TrashEntry> trash;
 
     /**
      * @param updates the open updates by project id
