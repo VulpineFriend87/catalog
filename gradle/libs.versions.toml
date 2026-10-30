@@ -11,6 +11,7 @@ bstats = "3.2.1"
 folialib = "0.5.2"
 commons = "0.3.1"
 lamp = "4.0.0"
+jedis = "8.0.2"
 
 junit = "6.1.3"
 
@@ -24,6 +25,7 @@ velocity = { module = "com.velocitypowered:velocity-api", version.ref = "velocit
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
 adventure-text-serializer-plain = { module = "net.kyori:adventure-text-serializer-plain", version.ref = "adventure" }
+adventure-text-logger-slf4j = { module = "net.kyori:adventure-text-logger-slf4j", version.ref = "adventure" }
 
 okaeri-core = { module = "eu.okaeri:okaeri-configs-core", version.ref = "okaeri" }
 okaeri-yaml-bukkit = { module = "eu.okaeri:okaeri-configs-yaml-bukkit", version.ref = "okaeri" }
@@ -40,6 +42,8 @@ lamp-common = { module = "io.github.revxrsal:lamp.common", version.ref = "lamp" 
 lamp-bukkit = { module = "io.github.revxrsal:lamp.bukkit", version.ref = "lamp" }
 lamp-velocity = { module = "io.github.revxrsal:lamp.velocity", version.ref = "lamp" }
 lamp-brigadier = { module = "io.github.revxrsal:lamp.brigadier", version.ref = "lamp" }
+
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }

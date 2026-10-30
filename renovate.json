@@ -35,7 +35,8 @@
         "com.velocitypowered:velocity-api",
         "com.google.code.gson:gson",
         "net.kyori:adventure-api",
-        "net.kyori:adventure-text-serializer-plain"
+        "net.kyori:adventure-text-serializer-plain",
+        "net.kyori:adventure-text-logger-slf4j"
       ],
       "enabled": false
     },

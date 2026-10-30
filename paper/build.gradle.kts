@@ -17,6 +17,7 @@ dependencies {
     implementation(libs.folialib)
     implementation(libs.commons)
     implementation(libs.lamp.common)
+    library(libs.jedis)
     implementation(libs.lamp.bukkit)
 
     compileOnly(libs.paper)

@@ -10,13 +10,16 @@ dependencies {
     compileOnly(libs.adventure.api)
     compileOnly(libs.lamp.common)
     compileOnly(libs.okaeri.core)
+    compileOnly(libs.jedis)
 
     testImplementation(libs.junit)
     testImplementation(libs.gson)
     testImplementation(libs.commons)
     testImplementation(libs.adventure.api)
     testImplementation(libs.adventure.text.serializer.plain)
+    testImplementation(libs.adventure.text.logger.slf4j)
     testImplementation(libs.lamp.common)
+    testImplementation(libs.jedis)
     testRuntimeOnly(libs.paper)
     testRuntimeOnly(libs.junit.launcher)
 }

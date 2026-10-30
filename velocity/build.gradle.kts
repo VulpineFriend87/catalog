@@ -11,6 +11,10 @@ dependencies {
     implementation(libs.okaeri.yaml.snakeyaml)
     implementation(libs.commons)
     implementation(libs.lamp.common)
+    implementation(libs.jedis) {
+        exclude(group = "org.slf4j")
+        exclude(group = "com.google.code.gson")
+    }
     implementation(libs.lamp.velocity)
     implementation(libs.lamp.brigadier)
 
@@ -44,6 +48,9 @@ tasks {
         shade("org.yaml.snakeyaml", "snakeyaml")
         shade("top.vulpine.commons", "commons")
         shade("revxrsal.commands", "lamp")
+        shade("redis.clients", "redis")
+        shade("org.apache.commons.pool2", "pool2")
+        shade("org.json", "json")
     }
 
     build {

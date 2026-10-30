@@ -91,6 +91,34 @@ public class Config extends OkaeriConfig {
 
     }
 
+    @CustomKey("network")
+    public Network network = new Network();
+
+    public static class Network extends OkaeriConfig {
+
+        @Comment("Share this server's plugins with the other Catalog servers through Redis.")
+        @CustomKey("enabled")
+        public boolean enabled = false;
+
+        @Comment("This server's name on the network. Lowercase letters, digits, - and _.")
+        @Comment("Every server needs its own.")
+        @CustomKey("server_name")
+        public String serverName = "";
+
+        @Comment("The Redis server, as redis://host:port.")
+        @CustomKey("redis")
+        public String redis = "redis://localhost:6379";
+
+        @Comment("The Redis password. Leave empty when there is none.")
+        @CustomKey("password")
+        public String password = "";
+
+        @Comment("How many days a server that went offline stays listed. 0 lists only online servers.")
+        @CustomKey("offline_days")
+        public int offlineDays = 7;
+
+    }
+
     @Comment("Log level for this plugin. Can be: DEBUG, INFO, WARN, ERROR.")
     @Comment("Leave as it is if you don't know what to choose.")
     @CustomKey("log_level")
