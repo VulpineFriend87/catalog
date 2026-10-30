@@ -28,8 +28,8 @@ public final class Inventory {
     /** The platform's Modrinth loader id. */
     private String platform;
 
-    /** The Minecraft version, or null on a proxy. */
-    private String minecraft;
+    /** The Minecraft version, or the proxy's own version on a proxy. */
+    private String serverVersion;
 
     /** The Catalog version the server runs. */
     private String catalog;

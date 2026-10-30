@@ -28,7 +28,7 @@ public final class Commands {
     public static final List<Class<?>> TYPES = List.of(
             CatalogCommand.class, ListCommand.class, InfoCommand.class, VersionsCommand.class,
             InstallCommand.class, UpdateCommand.class, RemoveCommand.class, TrashCommand.class,
-            SettingsCommand.class, HistoryCommand.class, SearchCommand.class);
+            SettingsCommand.class, HistoryCommand.class, SearchCommand.class, NetworkCommand.class);
 
     /** The permission each subcommand needs. */
     public static final CommandPermissions PERMISSIONS = CommandPermissions.of(ROOTS, TYPES);
@@ -64,8 +64,9 @@ public final class Commands {
                 new RemoveCommand(catalog, context, chat, confirmations, lookup, redraw),
                 new TrashCommand(catalog, context, chat, confirmations, lookup, screens, redraw),
                 new SettingsCommand(catalog, context, lookup, screens, redraw),
-                new HistoryCommand(catalog, context, chat),
-                new SearchCommand(screens));
+                new HistoryCommand(catalog, context, chat, screens),
+                new SearchCommand(screens),
+                new NetworkCommand(context, chat, screens));
     }
 
     private Installs installs() {

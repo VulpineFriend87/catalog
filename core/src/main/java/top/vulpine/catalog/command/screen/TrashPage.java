@@ -1,6 +1,7 @@
 package top.vulpine.catalog.command.screen;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.navigation.Press;
@@ -29,15 +30,19 @@ public final class TrashPage {
      * What has been removed and can still be restored.
      *
      * <p>Newest removal first.</p>
+     *
+     * @param server the server the trash belongs to, or null for this one. Another server's trash
+     *               is only shown.
+     * @param networked whether other servers can be shown
      */
-    public static List<Component> trash(List<TrashEntry> entries, int retentionDays, int page) {
+    public static List<Component> trash(List<TrashEntry> entries, int retentionDays, int page,
+                                        String server, boolean networked) {
 
         Pager pager = Pager.of(entries.size(), BIN, page);
 
         List<Component> out = new ArrayList<>();
 
-        out.add(line()
-                .append(title("Trash", BRAND))
+        out.add(head("Trash", server)
                 .append(Component.text("  " + entries.size(), TEXT))
                 .append(Component.text(" removed", MUTED))
                 .build());
@@ -48,28 +53,42 @@ public final class TrashPage {
             return out;
         }
 
-        out.add(Component.text(INDENT + (retentionDays > 0
-                ? "Deleted after " + retentionDays + " days."
-                : "Kept until you delete them."), MUTED));
-
-        out.add(Component.empty());
-
-        for (TrashEntry entry : pager.slice(entries)) {
-            out.add(trashRow(entry));
+        if (server == null) {
+            out.add(Component.text(INDENT + (retentionDays > 0
+                    ? "Deleted after " + retentionDays + " days."
+                    : "Kept until you delete them."), MUTED));
         }
 
         out.add(Component.empty());
 
-        out.add(pager.footer(List.of(
-                        button("Empty", from("/catalog trash delete all", new Screen.TrashScreen().token()),
-                                DANGER, "Delete everything in the trash"),
-                        button("Plugins", "/catalog list", MUTED, "Back to the plugin list")),
-                "Newer", "Older", shown -> "/catalog trash --page " + shown));
+        for (TrashEntry entry : pager.slice(entries)) {
+            out.add(trashRow(entry, server == null));
+        }
+
+        out.add(Component.empty());
+
+        List<Component> row = new ArrayList<>();
+
+        if (server == null) {
+            row.add(button("Empty", from("/catalog trash delete all", new Screen.TrashScreen().token()),
+                    DANGER, "Delete everything in the trash"));
+        }
+
+        row.add(button("Plugins", on("/catalog list", server), MUTED, "Back to the plugin list"));
+
+        if (networked) {
+            row.add(switchServer("trash", server));
+        }
+
+        out.add(pager.footer(row, "Newer", "Older", shown -> on("/catalog trash --page " + shown, server)));
 
         return out;
     }
 
-    private static Component trashRow(TrashEntry entry) {
+    /**
+     * @param actions whether the row can be restored and deleted from here
+     */
+    private static Component trashRow(TrashEntry entry, boolean actions) {
 
         Component hover = Component.text(entry.displayName(), TEXT)
                 .append(Component.newline())
@@ -84,13 +103,18 @@ public final class TrashPage {
                         ? "Not a Modrinth plugin. Restoring only puts the file back."
                         : "Restoring puts it back and tracks it again.", MUTED));
 
-        return line()
+        TextComponent.Builder row = line()
                 .append(Component.text(INDENT))
                 .append(Component.text(entry.displayName(), TEXT).hoverEvent(HoverEvent.showText(hover)))
                 .append(entry.versionNumber() == null ? Component.empty()
                         : Component.text("  " + entry.versionNumber(), MUTED))
-                .append(Component.text("  " + ago(entry.removedAt()), MUTED))
-                .append(Component.space())
+                .append(Component.text("  " + ago(entry.removedAt()), MUTED));
+
+        if (!actions) {
+            return row.build();
+        }
+
+        return row.append(Component.space())
                 .append(button("Restore", restoreCommand(entry, new Screen.TrashScreen().token()), BRAND,
                         "Put " + entry.displayName() + " back"))
                 .append(Component.space())

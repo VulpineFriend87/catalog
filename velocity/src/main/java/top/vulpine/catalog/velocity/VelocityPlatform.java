@@ -171,6 +171,17 @@ public final class VelocityPlatform implements Platform {
         return container.getDescription().getVersion().orElse("unknown");
     }
 
+    /**
+     * The proxy's version without the build it was made from.
+     */
+    @Override
+    public String serverVersion() {
+
+        String version = server.getVersion().getVersion();
+        int build = version.indexOf(' ');
+        return build < 0 ? version : version.substring(0, build);
+    }
+
     @Override
     public void async(Runnable task) {
         server.getScheduler().buildTask(plugin, task).schedule();

@@ -112,6 +112,11 @@ class UpdatesDependencyTest {
         }
 
         @Override
+        public String serverVersion() {
+            return "test";
+        }
+
+        @Override
         public void later(Runnable task, Duration delay) {
             task.run();
         }

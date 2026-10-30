@@ -122,6 +122,11 @@ public final class PaperPlatform implements Platform {
     }
 
     @Override
+    public String serverVersion() {
+        return plugin.getServer().getMinecraftVersion();
+    }
+
+    @Override
     public String stagingName() {
         return plugin.getServer().getUpdateFolderFile().getName();
     }

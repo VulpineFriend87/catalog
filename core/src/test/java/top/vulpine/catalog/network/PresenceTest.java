@@ -183,6 +183,11 @@ class PresenceTest {
         }
 
         @Override
+        public CompletionStage<Duration> ping() {
+            return CompletableFuture.completedFuture(Duration.ZERO);
+        }
+
+        @Override
         public void close() {
         }
 

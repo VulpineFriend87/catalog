@@ -23,6 +23,7 @@ import top.vulpine.catalog.network.Network;
 import top.vulpine.catalog.network.Presence;
 import top.vulpine.catalog.network.RedisNetwork;
 import top.vulpine.catalog.network.model.Inventory;
+import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.platform.ExitTasks;
 import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.Dependents;
@@ -46,9 +47,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -87,6 +91,12 @@ public final class Catalog {
     /** Null while the network is off. */
     private volatile Network network;
     private volatile Presence presence;
+
+    /** This server's name on the network, or null while the network is off. */
+    private volatile String serverName;
+
+    /** The names on the network as of the last publish. Read by tab completion. */
+    private volatile List<String> knownServers = List.of();
 
     /** Every Minecraft version Modrinth knows. Loaded on first use. */
     private volatile GameVersions gameVersions;
@@ -192,8 +202,59 @@ public final class Catalog {
             return;
         }
 
+        serverName = name;
         presence = new Presence(network, name, platform::later, platform::repeat, () -> publish(name));
         presence.join();
+    }
+
+    /**
+     * Every server on the network, this one included. Sorted by name.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     *
+     * @return the servers, or an empty list while the network is off
+     */
+    public List<Peer> peers() {
+
+        Network current = network;
+
+        if (current == null) {
+            return List.of();
+        }
+
+        Map<String, String> inventories = current.inventories().toCompletableFuture().join();
+        Set<String> online = current.online().toCompletableFuture().join();
+        List<Peer> peers = new ArrayList<>();
+
+        for (Map.Entry<String, String> entry : inventories.entrySet()) {
+            peers.add(new Peer(entry.getKey(), online.contains(entry.getKey()),
+                    Json.gson().fromJson(entry.getValue(), Inventory.class)));
+        }
+
+        peers.sort(Comparator.comparing(Peer::name));
+        knownServers = peers.stream().map(Peer::name).toList();
+
+        return peers;
+    }
+
+    /**
+     * Blocks, so it must be called off the main thread.
+     *
+     * @return how long the network took to answer, or null when it did not
+     */
+    public Duration ping() {
+
+        Network current = network;
+
+        if (current == null) {
+            return null;
+        }
+
+        try {
+            return current.ping().toCompletableFuture().join();
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**
@@ -206,7 +267,7 @@ public final class Catalog {
         Inventory inventory = Inventory.builder()
                 .server(name)
                 .platform(target.platform().id())
-                .minecraft(target.gameVersion())
+                .serverVersion(platform.serverVersion())
                 .catalog(platform.version())
                 .publishedAt(Instant.now())
                 .plugins(Inventory.plugins(tracking.all(), updatesByProject()))
@@ -220,6 +281,8 @@ public final class Catalog {
                 Logger.warn(CatalogAction.NETWORK, "Could not publish " + name + ": " + Errors.rootMessage(error));
             }
         });
+
+        network.inventories().thenAccept(names -> knownServers = names.keySet().stream().sorted().toList());
     }
 
     private void banner() {

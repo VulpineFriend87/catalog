@@ -10,6 +10,7 @@ import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.navigation.Trail;
+import top.vulpine.catalog.command.permission.Permitted;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +67,53 @@ public final class Widgets {
 
         // A confirmation reopened from itself is redrawn and never confirmed.
         return from(screen.reopen(), screen instanceof Screen.ChangeScreen ? from : Trail.parent(from));
+    }
+
+    /**
+     * A command aimed at another server.
+     *
+     * <p>{@code --server} goes last. The client only accepts flags in the order they are declared.</p>
+     *
+     * @param server the server it runs on, or null for this one
+     */
+    public static String on(String command, String server) {
+        return server == null ? command : command + " --server " + server;
+    }
+
+    /**
+     * The title of a screen and the server it shows when that is another one.
+     *
+     * @param server the server it shows, or null for this one
+     */
+    public static TextComponent.Builder head(String title, String server) {
+
+        TextComponent.Builder head = line().append(title(title, BRAND));
+        return server == null ? head : head.append(Component.text(" · " + server, BRAND));
+    }
+
+    /**
+     * The button that opens the same screen on another server.
+     *
+     * @param screen what {@code /catalog switch} reopens: list, history or trash
+     * @param server the server the screen shows, or null for this one
+     */
+    public static Component switchServer(String screen, String server) {
+        return button("Switch server", on("/catalog switch " + screen, server), MUTED, "Show another server");
+    }
+
+    /**
+     * A value that can be picked. The command runs when it is clicked.
+     */
+    public static Component choice(String label, String command, String description) {
+        return Permitted.link(Component.text(label, MUTED).append(Component.text("  ", MUTED)),
+                command, explain(description, command), null);
+    }
+
+    /**
+     * The value currently picked.
+     */
+    public static Component chosen(String label) {
+        return Component.text(label, BRAND).append(Component.text("  ", MUTED));
     }
 
     public static Component buttons(List<Component> row) {

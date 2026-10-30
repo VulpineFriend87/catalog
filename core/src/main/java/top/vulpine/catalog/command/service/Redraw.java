@@ -76,12 +76,12 @@ public final class Redraw {
 
         @Override
         public void list(Screen.ListScreen screen) {
-            screens.showList(viewer, true, screen.filters());
+            screens.showList(viewer, true, screen.filters(), null);
         }
 
         @Override
         public void trash(Screen.TrashScreen screen) {
-            screens.showTrash(viewer, 1);
+            screens.showTrash(viewer, 1, null);
         }
 
         @Override

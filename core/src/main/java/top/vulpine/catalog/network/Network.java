@@ -46,6 +46,11 @@ public interface Network extends AutoCloseable {
      */
     CompletionStage<Set<String>> online();
 
+    /**
+     * @return how long the network took to answer
+     */
+    CompletionStage<Duration> ping();
+
     @Override
     void close();
 

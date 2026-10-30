@@ -38,24 +38,25 @@ public final class HistoryPage {
      * @param entries what to show sorted newest first
      * @param page    the page number starting at one
      * @param filter  what the header says the list was narrowed to, or null when it was not
-     * @param command the command the pager adds {@code --page} to
+     * @param command the command the pager adds {@code --page} to, without {@code --server}
+     * @param server    the server the log belongs to, or null for this one
+     * @param networked whether other servers can be shown
      */
     public static List<Component> history(List<HistoryEntry> entries, int page, String filter,
-                                          String command) {
+                                          String command, String server, boolean networked) {
 
         List<List<HistoryEntry>> pages = paged(entries);
         Pager pager = Pager.at(page, pages.size());
 
         List<Component> out = new ArrayList<>();
 
-        TextComponent.Builder header = line()
-                .append(title("Catalog", BRAND))
+        TextComponent.Builder header = head("Catalog", server)
                 .append(Component.text("  history", MUTED));
 
         out.add(header.build());
 
         if (filter != null) {
-            out.add(ListPage.filtersLine(filter, "/catalog history"));
+            out.add(ListPage.filtersLine(filter, on("/catalog history", server)));
         }
 
         if (entries.isEmpty()) {
@@ -76,13 +77,19 @@ public final class HistoryPage {
                 out.add(Component.text(INDENT + dayName(on), BRAND));
             }
 
-            out.add(historyRow(entry));
+            out.add(historyRow(entry, server));
         }
 
         out.add(Component.empty());
 
-        out.add(pager.footer(List.of(button("Plugins", "/catalog list", MUTED, "Back to the plugin list")),
-                "Newer", "Older", shown -> command + " --page " + shown));
+        List<Component> row = new ArrayList<>();
+        row.add(button("Plugins", on("/catalog list", server), MUTED, "Back to the plugin list"));
+
+        if (networked) {
+            row.add(switchServer("history", server));
+        }
+
+        out.add(pager.footer(row, "Newer", "Older", shown -> on(command + " --page " + shown, server)));
 
         return out;
     }
@@ -133,7 +140,7 @@ public final class HistoryPage {
         return on.format(DateTimeFormatter.ofPattern("d MMMM", Locale.ENGLISH));
     }
 
-    private static Component historyRow(HistoryEntry entry) {
+    private static Component historyRow(HistoryEntry entry, String server) {
 
         TextComponent.Builder row = line().append(Component.text(INDENT + INDENT));
 
@@ -143,14 +150,15 @@ public final class HistoryPage {
 
         row.append(Component.text(said(entry), colourOf(entry.event())));
 
-        Component detail = historyDetail(entry);
+        Component detail = historyDetail(entry, server);
 
         // A row narrows the list to its own plugin.
         if (entry.slug() == null) {
             return row.hoverEvent(HoverEvent.showText(detail)).build();
         }
 
-        return Permitted.link(row.build(), "/catalog history --plugin " + entry.slug(), detail, detail);
+        return Permitted.link(row.build(), on("/catalog history --plugin " + entry.slug(), server), detail,
+                detail);
     }
 
     /**
@@ -217,7 +225,7 @@ public final class HistoryPage {
         }
     }
 
-    private static Component historyDetail(HistoryEntry entry) {
+    private static Component historyDetail(HistoryEntry entry, String server) {
 
         TextComponent.Builder hover = Component.text()
                 .append(Component.text(entry.name() == null ? "Catalog" : entry.name(), TEXT));
@@ -272,7 +280,7 @@ public final class HistoryPage {
                     .append(Component.newline())
                     .append(Component.text("Show only " + entry.name(), TEXT))
                     .append(Component.newline())
-                    .append(Component.text("/catalog history --plugin " + entry.slug(), MUTED));
+                    .append(Component.text(on("/catalog history --plugin " + entry.slug(), server), MUTED));
         }
 
         return hover.build();

@@ -106,6 +106,11 @@ public interface Platform {
     String version();
 
     /**
+     * @return the Minecraft version, or the proxy's own version on a proxy
+     */
+    String serverVersion();
+
+    /**
      * Runs a task off the main thread.
      */
     void async(Runnable task);

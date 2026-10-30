@@ -7,6 +7,8 @@ import top.vulpine.catalog.command.argument.ListFilter;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.jar.model.InstalledJar;
+import top.vulpine.catalog.network.model.Inventory;
+import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 import top.vulpine.catalog.update.model.UpdateCandidate;
@@ -35,12 +37,13 @@ public final class ListPage {
     /**
      * @param checkedAt   when Modrinth last answered, or null if it never has
      * @param unreachable why the last check could not reach it, or null when it did
+     * @param networked   whether other servers can be shown
      */
     public static List<Component> list(List<TrackedPlugin> plugins, Map<String, UpdateCandidate> updates,
                                        Map<String, EnableCheck.Failure> notEnabled,
                                        String self, List<InstalledJar> untracked,
                                        Set<ListFilter> filters, Instant checkedAt,
-                                       String unreachable) {
+                                       String unreachable, boolean networked) {
 
         String screen = new Screen.ListScreen(filters).token();
         List<TrackedPlugin> ordered = new ArrayList<>();
@@ -60,18 +63,7 @@ public final class ListPage {
 
         List<Component> out = new ArrayList<>();
 
-        TextComponent.Builder header = line()
-                .append(title("Catalog", BRAND))
-                .append(Component.text("  " + plugins.size(), TEXT))
-                .append(Component.text(" plugins", MUTED));
-
-        if (!updates.isEmpty()) {
-            header.append(Component.text(" · ", MUTED))
-                    .append(Component.text(updates.size(), BRAND))
-                    .append(Component.text(" to update", MUTED));
-        }
-
-        out.add(header.build());
+        out.add(header(null, plugins.size(), updates.size()));
 
         if (!filters.isEmpty()) {
 
@@ -127,9 +119,98 @@ public final class ListPage {
                 .append(Component.space())
                 .append(button("History", "/catalog history", MUTED, "What Catalog has done"));
 
+        if (networked) {
+            footer.append(Component.space()).append(switchServer("list", null));
+        }
+
         out.add(footer.build());
 
         return out;
+    }
+
+    /**
+     * @param server the server the list belongs to, or null for this one
+     */
+    private static Component header(String server, int plugins, long updates) {
+
+        TextComponent.Builder header = head("Catalog", server);
+
+        header.append(Component.text("  " + plugins, TEXT))
+                .append(Component.text(" plugins", MUTED));
+
+        if (updates > 0) {
+            header.append(Component.text(" · ", MUTED))
+                    .append(Component.text(updates, BRAND))
+                    .append(Component.text(" to update", MUTED));
+        }
+
+        return header.build();
+    }
+
+    /**
+     * Another server's plugins as it last published them.
+     *
+     */
+    public static List<Component> remote(Peer peer) {
+
+        List<Inventory.Plugin> ordered = new ArrayList<>(peer.inventory().plugins());
+
+        ordered.sort(Comparator
+                .comparing((Inventory.Plugin plugin) -> plugin.update() == null)
+                .thenComparing(plugin -> plugin.name().toLowerCase(Locale.ROOT)));
+
+        long updates = ordered.stream().filter(plugin -> plugin.update() != null).count();
+        List<Component> out = new ArrayList<>();
+
+        out.add(header(peer.name(), ordered.size(), updates));
+
+        if (!peer.online()) {
+            out.add(Component.text(INDENT + "Offline. Last seen " + ago(peer.inventory().publishedAt()),
+                    MUTED));
+        }
+
+        out.add(Component.empty());
+
+        for (Inventory.Plugin plugin : ordered) {
+            out.add(remoteRow(plugin));
+        }
+
+        if (ordered.isEmpty()) {
+            out.add(Component.text(INDENT + "No plugins", MUTED));
+        }
+
+        out.add(Component.empty());
+        out.add(buttons(List.of(
+                button("Trash", on("/catalog trash", peer.name()), MUTED, "Show its trashed plugins"),
+                button("History", on("/catalog history", peer.name()), MUTED, "What Catalog did there"),
+                switchServer("list", peer.name()))));
+
+        return out;
+    }
+
+    private static Component remoteRow(Inventory.Plugin plugin) {
+
+        Component info = Component.text(plugin.name(), TEXT)
+                .append(Component.newline())
+                .append(Component.text(plugin.version() == null ? "unknown version" : plugin.version(), MUTED))
+                .append(Component.text("  " + plugin.channel().apiName(), MUTED));
+
+        TextComponent.Builder row = line()
+                .append(Component.text(INDENT))
+                .append(Component.text(plugin.name(), TEXT).hoverEvent(HoverEvent.showText(info)));
+
+        if (plugin.update() != null) {
+            row.append(Component.text(" ↑", BRAND)
+                    .hoverEvent(HoverEvent.showText(Component.text(plugin.update() + " available", TEXT))));
+        }
+
+        if (plugin.waiting()) {
+            row.append(Component.text("  restart", PENDING));
+        } else if (plugin.held()) {
+            row.append(Component.text("  held", MUTED));
+        }
+
+        return row.build();
     }
 
     public static Component filtersLine(String shown, String clear) {

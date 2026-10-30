@@ -1,10 +1,14 @@
 package top.vulpine.catalog.command;
 
 import revxrsal.commands.annotation.Description;
+import revxrsal.commands.annotation.Flag;
+import revxrsal.commands.annotation.Optional;
 import revxrsal.commands.annotation.Subcommand;
+import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.annotation.Switch;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.command.argument.ListFilter;
+import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.RequiresPermission;
@@ -41,7 +45,8 @@ public final class ListCommand implements OrphanCommand {
                      @Switch("updates") boolean updates,
                      @Switch("restart") boolean restart,
                      @Switch("held") boolean held,
-                     @Switch(value = "untracked", shorthand = 'n') boolean untracked) {
+                     @Switch(value = "untracked", shorthand = 'n') boolean untracked,
+                     @Optional @Flag("server") @SuggestWith(Suggestions.Servers.class) String server) {
 
         // A filter button reuses the last answer from Modrinth.
         boolean refresh = !(Screen.parse(context.take(viewer)) instanceof Screen.ListScreen);
@@ -64,7 +69,7 @@ public final class ListCommand implements OrphanCommand {
             filters.add(ListFilter.UNTRACKED);
         }
 
-        chat.runAsync(viewer, () -> screens.showList(viewer, refresh, filters));
+        chat.runAsync(viewer, () -> screens.showList(viewer, refresh, filters, server));
     }
 
 }

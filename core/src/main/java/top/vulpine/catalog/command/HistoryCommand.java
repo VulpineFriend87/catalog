@@ -15,7 +15,10 @@ import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.HistoryPage;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.service.Chat;
+import top.vulpine.catalog.command.service.Screens;
+import top.vulpine.catalog.history.History;
 import top.vulpine.catalog.history.HistoryEntry;
+import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.platform.Viewer;
 
 import java.util.List;
@@ -33,10 +36,13 @@ public final class HistoryCommand implements OrphanCommand {
 
     private final Chat chat;
 
-    public HistoryCommand(Catalog catalog, ClickContext context, Chat chat) {
+    private final Screens screens;
+
+    public HistoryCommand(Catalog catalog, ClickContext context, Chat chat, Screens screens) {
         this.catalog = catalog;
         this.context = context;
         this.chat = chat;
+        this.screens = screens;
     }
 
     @Subcommand("history")
@@ -47,11 +53,26 @@ public final class HistoryCommand implements OrphanCommand {
                         @SuggestWith(Suggestions.Logged.class) String which,
                         @Optional @Flag("author") String author,
                         @Optional @Flag("event") @SuggestWith(Suggestions.Kinds.class) String event,
-                        @Flag("page") @Default("1") int page) {
+                        @Flag("page") @Default("1") int page,
+                        @Optional @Flag("server") @SuggestWith(Suggestions.Servers.class) String server) {
 
         context.take(viewer);
 
         chat.runAsync(viewer, () -> {
+
+            // Another server's log as it last published it.
+            List<HistoryEntry> log = null;
+
+            if (screens.isRemote(server)) {
+
+                Peer peer = screens.peer(viewer, server);
+
+                if (peer == null) {
+                    return;
+                }
+
+                log = peer.inventory().history();
+            }
 
             String projectId = null;
             String label = null;
@@ -60,7 +81,7 @@ public final class HistoryCommand implements OrphanCommand {
             if (which != null && !which.isBlank()) {
 
                 // The log still knows plugins that have been removed.
-                projectId = catalog.loggedProjectId(which);
+                projectId = log == null ? catalog.loggedProjectId(which) : History.projectIdFor(log, which);
 
                 if (projectId == null) {
                     send(viewer, Outcomes.unknownPlugin(which));
@@ -76,7 +97,8 @@ public final class HistoryCommand implements OrphanCommand {
                 command.append(" --author ").append(author);
             }
 
-            List<HistoryEntry> entries = catalog.history(projectId, author);
+            List<HistoryEntry> entries = log == null ? catalog.history(projectId, author)
+                    : History.filter(log, projectId, author);
 
             if (event != null && !event.isBlank()) {
 
@@ -92,7 +114,10 @@ public final class HistoryCommand implements OrphanCommand {
                 command.append(" --event ").append(kind.label());
             }
 
-            send(viewer, HistoryPage.history(entries, Math.max(page, 1), label, command.toString()));
+            String shown = log == null ? null : server;
+
+            send(viewer, HistoryPage.history(entries, Math.max(page, 1), label, command.toString(), shown,
+                    catalog.getServerName() != null));
         });
     }
 

@@ -66,6 +66,8 @@ public final class HelpPage {
                     new Entry("untrack", "<plugin>", "Stop managing a plugin"),
                     new Entry("track", "<jar>", "Manage a plugin again")),
             List.of(
+                    new Entry("network", "", "Servers on the network"),
+                    new Entry("switch", "[list|history|trash]", "Open a screen on another server"),
                     new Entry("reload", "", "Reload the configuration")));
 
     private record Entry(String name, String arguments, String description) {

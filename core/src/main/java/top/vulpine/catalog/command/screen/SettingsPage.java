@@ -4,7 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.navigation.Trail;
-import top.vulpine.catalog.command.permission.Permitted;
+import top.vulpine.catalog.command.screen.widget.Widgets;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
 
@@ -142,18 +142,7 @@ public final class SettingsPage {
 
     private static Component choice(String label, String command, boolean selected,
                                     String description, String here) {
-
-        if (selected) {
-            return chosen(label);
-        }
-
-        return Permitted.link(Component.text(label, MUTED).append(Component.text("  ", MUTED)),
-                from(command, here), explain(description, command), null);
-    }
-
-    /** The value a setting currently holds. */
-    private static Component chosen(String label) {
-        return Component.text(label, BRAND).append(Component.text("  ", MUTED));
+        return selected ? chosen(label) : Widgets.choice(label, from(command, here), description);
     }
 
 }

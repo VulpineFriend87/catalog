@@ -68,6 +68,7 @@ bukkit {
     val commands = linkedMapOf(
         "list" to "Lists managed plugins.",
         "history" to "Shows what Catalog has done.",
+        "network" to "Shows the servers on the network.",
         "info" to "Shows a plugin's details, versions and dependencies.",
         "search" to "Searches Modrinth.",
         "install" to "Installs plugins.",

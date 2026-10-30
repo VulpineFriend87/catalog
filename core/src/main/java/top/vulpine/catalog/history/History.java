@@ -125,11 +125,22 @@ public final class History {
      * @return the matching entries
      */
     public List<HistoryEntry> filter(String projectId, String by) {
+        return filter(all(), projectId, by);
+    }
+
+    /**
+     * The entries of any log matching both filters.
+     *
+     * @param projectId only this plugin, or null for every plugin
+     * @param by        only this author, or null for everyone. "catalog" is what Catalog did
+     *                  automatically.
+     */
+    public static List<HistoryEntry> filter(List<HistoryEntry> entries, String projectId, String by) {
 
         List<HistoryEntry> matching = new ArrayList<>();
         boolean wantsCatalog = by != null && by.equalsIgnoreCase("catalog");
 
-        for (HistoryEntry entry : all()) {
+        for (HistoryEntry entry : entries) {
 
             if (projectId != null && !projectId.equals(entry.projectId())) {
                 continue;
@@ -162,6 +173,15 @@ public final class History {
      * @return the project id, or null when the log has never mentioned it
      */
     public String projectIdFor(String query) {
+        return projectIdFor(all(), query);
+    }
+
+    /**
+     * The project a name, slug or id refers to among the plugins any log mentions.
+     *
+     * @return the project id, or null when the log has never mentioned it
+     */
+    public static String projectIdFor(List<HistoryEntry> entries, String query) {
 
         if (query == null || query.isBlank()) {
             return null;
@@ -169,7 +189,7 @@ public final class History {
 
         String wanted = query.trim();
 
-        for (HistoryEntry entry : all()) {
+        for (HistoryEntry entry : entries) {
 
             if (entry.projectId() == null) {
                 continue;

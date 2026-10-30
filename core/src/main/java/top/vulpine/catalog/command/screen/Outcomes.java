@@ -202,6 +202,24 @@ public final class Outcomes {
         return Component.text("Configuration reloaded", MUTED);
     }
 
+    public static Component networkOff() {
+        return Component.text("The network is off", MUTED);
+    }
+
+    public static Component unknownScreen(String name) {
+        return line()
+                .append(Component.text(name, TEXT))
+                .append(Component.text(" cannot be opened on another server", MUTED))
+                .build();
+    }
+
+    public static Component unknownServer(String name) {
+        return line()
+                .append(Component.text(name, TEXT))
+                .append(Component.text(" is not on the network", MUTED))
+                .build();
+    }
+
     public static Component upToDate() {
         return Component.text("Nothing to update", MUTED);
     }

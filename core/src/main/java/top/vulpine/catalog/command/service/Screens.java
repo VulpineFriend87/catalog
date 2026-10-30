@@ -11,6 +11,7 @@ import top.vulpine.catalog.command.screen.ChangePage;
 import top.vulpine.catalog.command.screen.DependenciesPage;
 import top.vulpine.catalog.command.screen.InfoPage;
 import top.vulpine.catalog.command.screen.ListPage;
+import top.vulpine.catalog.command.screen.NetworkPage;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.screen.SearchPage;
 import top.vulpine.catalog.command.screen.SettingsPage;
@@ -22,6 +23,7 @@ import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.modrinth.model.SearchResults;
+import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.platform.Viewer;
 import top.vulpine.catalog.tracking.EnableCheck;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
@@ -121,10 +123,24 @@ public final class Screens {
                 notFor, catalog.named(needs), asked, Trail.within(here, asked == null ? null : asked.screen()), command));
     }
 
-    public void showTrash(Viewer viewer, int page) {
+    /**
+     * @param server the server whose trash to show, or null for this one
+     */
+    public void showTrash(Viewer viewer, int page, String server) {
+
         confirmations.abandon(viewer);
-        send(viewer, TrashPage.trash(catalog.trashed(),
-                catalog.getConfiguration().get().trash.retentionDays, page));
+        int retention = catalog.getConfiguration().get().trash.retentionDays;
+
+        if (!isRemote(server)) {
+            send(viewer, TrashPage.trash(catalog.trashed(), retention, page, null, networked()));
+            return;
+        }
+
+        Peer peer = peer(viewer, server);
+
+        if (peer != null) {
+            send(viewer, TrashPage.trash(peer.inventory().trash(), retention, page, peer.name(), true));
+        }
     }
 
     /**
@@ -141,10 +157,22 @@ public final class Screens {
      * <p>Blocks, so it must be called off the main thread.</p>
      *
      * @param refresh whether to ask Modrinth again first
+     * @param server  the server whose plugins to show, or null for this one
      */
-    public void showList(Viewer viewer, boolean refresh, Set<ListFilter> filters) {
+    public void showList(Viewer viewer, boolean refresh, Set<ListFilter> filters, String server) {
 
         confirmations.abandon(viewer);
+
+        if (isRemote(server)) {
+
+            Peer peer = peer(viewer, server);
+
+            if (peer != null) {
+                send(viewer, ListPage.remote(peer));
+            }
+
+            return;
+        }
 
         if (catalog.getTracking().size() == 0 && catalog.untracked().isEmpty()) {
             send(viewer, Outcomes.nothingTracked());
@@ -170,7 +198,96 @@ public final class Screens {
 
         send(viewer, ListPage.list(catalog.getTracking().all(), catalog.updatesByProject(), notEnabled,
                 catalog.ownFileName(), catalog.untracked(), filters,
-                catalog.getUpdates().checkedAt(), catalog.getUpdates().unreachable()));
+                catalog.getUpdates().checkedAt(), catalog.getUpdates().unreachable(), networked()));
+    }
+
+    /**
+     * Sends the servers on the network and the connection to it.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     */
+    public void showNetwork(Viewer viewer) {
+
+        confirmations.abandon(viewer);
+
+        if (catalog.getServerName() == null) {
+            send(viewer, Outcomes.networkOff());
+            return;
+        }
+
+        send(viewer, NetworkPage.network(catalog.ping(), peers(), catalog.getServerName(),
+                catalog.getPlatform().version()));
+    }
+
+    /**
+     * Sends the servers to open a screen on.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     *
+     * @param screen the screen to reopen: list, history or trash
+     * @param shown  the server the screen shows now, or null for this one
+     */
+    public void showSwitch(Viewer viewer, String screen, String shown) {
+
+        confirmations.abandon(viewer);
+
+        if (catalog.getServerName() == null) {
+            send(viewer, Outcomes.networkOff());
+            return;
+        }
+
+        String self = catalog.getServerName();
+        send(viewer, NetworkPage.pick(peers(), self, shown == null ? self : shown, screen));
+    }
+
+    /**
+     * Whether this server is on the network.
+     */
+    private boolean networked() {
+        return catalog.getServerName() != null;
+    }
+
+    /**
+     * Whether a {@code --server} value names another server.
+     */
+    public boolean isRemote(String server) {
+        return server != null && !server.equals(catalog.getServerName());
+    }
+
+    /**
+     * Another server as it last published itself. Tells the viewer when there is none.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     *
+     * @return the server, or null when the network is off or does not know it
+     */
+    public Peer peer(Viewer viewer, String server) {
+
+        if (catalog.getServerName() == null) {
+            send(viewer, Outcomes.networkOff());
+            return null;
+        }
+
+        for (Peer peer : peers()) {
+            if (peer.name().equals(server)) {
+                return peer;
+            }
+        }
+
+        send(viewer, Outcomes.unknownServer(server));
+        return null;
+    }
+
+    /**
+     * The servers on the network, or none when it cannot be read.
+     */
+    private List<Peer> peers() {
+
+        try {
+            return catalog.peers();
+        } catch (RuntimeException e) {
+            return List.of();
+        }
     }
 
     /**

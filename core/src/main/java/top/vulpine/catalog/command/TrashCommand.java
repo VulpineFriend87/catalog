@@ -4,6 +4,7 @@ import revxrsal.commands.annotation.Default;
 import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Flag;
 import revxrsal.commands.annotation.Named;
+import revxrsal.commands.annotation.Optional;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
@@ -58,8 +59,9 @@ public final class TrashCommand implements OrphanCommand {
     @Subcommand("trash")
     @Description("Show plugins you have removed")
     @RequiresPermission("command.trash")
-    public void trash(Viewer viewer, @Flag("page") @Default("1") int page) {
-        chat.runAsync(viewer, () -> screens.showTrash(viewer, Math.max(page, 1)));
+    public void trash(Viewer viewer, @Flag("page") @Default("1") int page,
+                      @Optional @Flag("server") @SuggestWith(Suggestions.Servers.class) String server) {
+        chat.runAsync(viewer, () -> screens.showTrash(viewer, Math.max(page, 1), server));
     }
 
     /**

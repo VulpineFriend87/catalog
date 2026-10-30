@@ -177,6 +177,16 @@ public final class RedisNetwork implements Network {
     }
 
     @Override
+    public CompletionStage<Duration> ping() {
+
+        return run(() -> {
+            long start = System.nanoTime();
+            redis.ping();
+            return Duration.ofNanos(System.nanoTime() - start);
+        });
+    }
+
+    @Override
     public void close() {
         executor.shutdown();
         redis.close();
