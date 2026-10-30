@@ -3,6 +3,7 @@ package top.vulpine.catalog.command.screen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.TextColor;
 import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.install.DependencyResolver;
@@ -78,11 +79,11 @@ public final class InfoPage {
         }
 
         if (!requirements.isEmpty()) {
-            out.add(field("Needs", requirements(requirements)));
+            out.add(field("Needs", requirements(requirements, PENDING)));
         }
 
         if (!optionals.isEmpty()) {
-            out.add(field("Optional", requirements(optionals)));
+            out.add(field("Optional", requirements(optionals, MUTED)));
         }
 
         out.add(Component.empty());
@@ -231,7 +232,11 @@ public final class InfoPage {
         return out.build();
     }
 
-    private static Component requirements(List<DependencyResolver.Requirement> requirements) {
+    /**
+     * @param missing the colour of the ones not installed
+     */
+    private static Component requirements(List<DependencyResolver.Requirement> requirements,
+                                          TextColor missing) {
 
         TextComponent.Builder out = Component.text();
         boolean first = true;
@@ -242,10 +247,10 @@ public final class InfoPage {
                 out.append(Component.text(", ", MUTED));
             }
 
-            out.append(Component.text(requirement.name(), requirement.installed() ? TEXT : PENDING)
+            out.append(Component.text(requirement.name(), requirement.installed() ? TEXT : missing)
                     .hoverEvent(HoverEvent.showText(Component.text(
                             requirement.installed() ? "installed" : "not installed",
-                            requirement.installed() ? MUTED : PENDING))));
+                            requirement.installed() ? MUTED : missing))));
 
             first = false;
         }
