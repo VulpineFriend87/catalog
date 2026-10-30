@@ -5,7 +5,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import redis.clients.jedis.DefaultJedisClientConfig;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.RedisClient;
 
+import java.net.URI;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,22 +32,44 @@ class RedisNetworkIntegrationTest {
 
     private static RedisNetwork network;
 
+    private static String address;
+
+    private static String password;
+
     @BeforeAll
     static void connect() {
 
-        String address = System.getenv("CATALOG_REDIS");
+        address = System.getenv("CATALOG_REDIS");
         assumeTrue(address != null && !address.isEmpty(), "CATALOG_REDIS is not set");
 
-        String password = System.getenv("CATALOG_REDIS_PASSWORD");
-        network = RedisNetwork.connect(address, password == null ? "" : password, Duration.ofMinutes(1));
+        String given = System.getenv("CATALOG_REDIS_PASSWORD");
+        password = given == null ? "" : given;
+        network = RedisNetwork.connect(address, password, Duration.ofMinutes(1));
     }
 
     @AfterAll
     static void close() {
 
-        if (network != null) {
-            network.release(SERVER).toCompletableFuture().join();
-            network.close();
+        if (network == null) {
+            return;
+        }
+
+        network.close();
+
+        // Leaves nothing behind on a Redis that real servers use.
+        URI uri = URI.create(address);
+        DefaultJedisClientConfig.Builder config = DefaultJedisClientConfig.builder();
+
+        if (!password.isEmpty()) {
+            config.password(password);
+        }
+
+        try (RedisClient redis = RedisClient.builder()
+                .hostAndPort(new HostAndPort(uri.getHost(), uri.getPort()))
+                .clientConfig(config.build())
+                .build()) {
+            redis.del("catalog:alive:" + SERVER, "catalog:server:" + SERVER);
+            redis.srem("catalog:servers", SERVER);
         }
     }
 
