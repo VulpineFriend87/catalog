@@ -30,7 +30,8 @@ class PresenceTest {
     /** The renewal task the presence scheduled. */
     private final List<Runnable> renewals = new ArrayList<>();
 
-    private int joins;
+    /** How many times the presence said it holds its name. */
+    private int beats;
 
     /** How many times the presence asked again for a held name. */
     private int retries;
@@ -53,7 +54,7 @@ class PresenceTest {
             }
 
             task.run();
-        }, (task, period) -> renewals.add(task), () -> joins++);
+        }, (task, period) -> renewals.add(task), () -> beats++);
     }
 
     @Test
@@ -64,7 +65,7 @@ class PresenceTest {
         presence.join();
 
         assertTrue(presence.held());
-        assertEquals(1, joins);
+        assertEquals(1, beats);
         assertEquals(1, renewals.size());
         assertEquals(0, retries);
     }
@@ -79,7 +80,7 @@ class PresenceTest {
         presence.join();
 
         assertFalse(presence.held());
-        assertEquals(0, joins);
+        assertEquals(0, beats);
         assertEquals(Presence.ATTEMPTS - 1, retries);
     }
 
@@ -94,8 +95,21 @@ class PresenceTest {
         presence.join();
 
         assertTrue(presence.held());
-        assertEquals(1, joins);
+        assertEquals(1, beats);
         assertEquals(4, retries);
+    }
+
+    @Test
+    @DisplayName("every renewal is a beat")
+    void renewed() {
+
+        Presence presence = presence("lobby");
+        presence.join();
+
+        renewals.get(0).run();
+        renewals.get(0).run();
+
+        assertEquals(3, beats);
     }
 
     @Test
@@ -109,7 +123,7 @@ class PresenceTest {
         renewals.get(0).run();
 
         assertTrue(presence.held());
-        assertEquals(2, joins);
+        assertEquals(2, beats);
         assertEquals(1, renewals.size());
     }
 

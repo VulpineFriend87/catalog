@@ -36,8 +36,8 @@ public final class Presence {
 
     private final BiConsumer<Runnable, Duration> repeat;
 
-    /** Runs whenever the name is taken. Redis restarting empty takes it again. */
-    private final Runnable joined;
+    /** Runs when the name is taken and after every renewal. */
+    private final Runnable beat;
 
     private volatile boolean held;
 
@@ -46,15 +46,15 @@ public final class Presence {
     /**
      * @param later  runs a task once after a delay
      * @param repeat runs a task every period
-     * @param joined runs each time the name is taken
+     * @param beat   runs when the name is taken and after every renewal
      */
     public Presence(Network network, String server, BiConsumer<Runnable, Duration> later,
-                    BiConsumer<Runnable, Duration> repeat, Runnable joined) {
+                    BiConsumer<Runnable, Duration> repeat, Runnable beat) {
         this.network = network;
         this.server = server;
         this.later = later;
         this.repeat = repeat;
-        this.joined = joined;
+        this.beat = beat;
     }
 
     /**
@@ -140,7 +140,7 @@ public final class Presence {
             repeat.accept(this::renew, RENEW);
         }
 
-        joined.run();
+        beat.run();
     }
 
     private void renew() {
@@ -157,11 +157,14 @@ public final class Presence {
                 return;
             }
 
-            if (!kept) {
-                held = false;
-                Logger.warn(CatalogAction.NETWORK, server + " was dropped from the network. Joining again.");
-                attempt(ATTEMPTS, false);
+            if (kept) {
+                beat.run();
+                return;
             }
+
+            held = false;
+            Logger.warn(CatalogAction.NETWORK, server + " was dropped from the network. Joining again.");
+            attempt(ATTEMPTS, false);
         });
     }
 

@@ -10,6 +10,7 @@ import top.vulpine.catalog.install.Downloader;
 import top.vulpine.catalog.install.InstallException;
 import top.vulpine.catalog.install.Installer;
 import top.vulpine.catalog.jar.model.InstalledJar;
+import top.vulpine.catalog.json.Json;
 import top.vulpine.catalog.modrinth.GameVersions;
 import top.vulpine.catalog.modrinth.ModrinthClient;
 import top.vulpine.catalog.modrinth.Projects;
@@ -18,6 +19,10 @@ import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
 import top.vulpine.catalog.modrinth.model.SearchResults;
+import top.vulpine.catalog.network.Network;
+import top.vulpine.catalog.network.Presence;
+import top.vulpine.catalog.network.RedisNetwork;
+import top.vulpine.catalog.network.model.Inventory;
 import top.vulpine.catalog.platform.ExitTasks;
 import top.vulpine.catalog.platform.Platform;
 import top.vulpine.catalog.tracking.Dependents;
@@ -33,6 +38,7 @@ import top.vulpine.catalog.trash.Removals;
 import top.vulpine.catalog.trash.TrashBin;
 import top.vulpine.catalog.trash.model.TrashEntry;
 import top.vulpine.catalog.update.Updates;
+import top.vulpine.catalog.update.model.ServerTarget;
 import top.vulpine.catalog.update.model.UpdateCandidate;
 import top.vulpine.commons.log.Logger;
 
@@ -44,12 +50,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Catalog's services for one platform.
  */
 @Getter
 public final class Catalog {
+
+    /** What a server name on the network may hold. */
+    private static final Pattern SERVER_NAME = Pattern.compile("[a-z0-9_-]{1,32}");
 
     private final Platform platform;
 
@@ -73,6 +83,10 @@ public final class Catalog {
     private Library library;
     private Dependents dependents;
     private EnableCheck enableCheck;
+
+    /** Null while the network is off. */
+    private volatile Network network;
+    private volatile Presence presence;
 
     /** Every Minecraft version Modrinth knows. Loaded on first use. */
     private volatile GameVersions gameVersions;
@@ -133,14 +147,77 @@ public final class Catalog {
         platform.async(this::pruneTrash);
         scheduleUpdateChecks();
 
+        if (configuration.get().network.enabled) {
+            platform.async(this::joinNetwork);
+        }
+
         return true;
     }
 
     public void stop() {
 
+        if (presence != null) {
+            presence.leave();
+        }
+
+        if (network != null) {
+            network.close();
+        }
+
         if (modrinth != null) {
             modrinth.close();
         }
+    }
+
+    /**
+     * Connects to Redis and takes this server's name.
+     */
+    private void joinNetwork() {
+
+        Config.Network settings = configuration.get().network;
+        String name = settings.serverName.trim();
+
+        if (!SERVER_NAME.matcher(name).matches()) {
+            Logger.error(CatalogAction.NETWORK, "network.server_name must be up to 32 lowercase letters,"
+                    + " digits, - and _. The network is off.");
+            return;
+        }
+
+        try {
+            network = RedisNetwork.connect(settings.redis, settings.password,
+                    Duration.ofDays(Math.max(settings.offlineDays, 0)));
+        } catch (RuntimeException e) {
+            Logger.error(CatalogAction.NETWORK, "Could not connect to Redis: " + Errors.rootMessage(e)
+                    + ". The network is off.");
+            return;
+        }
+
+        presence = new Presence(network, name, platform::later, platform::repeat, () -> publish(name));
+        presence.join();
+    }
+
+    /**
+     * Sends this server's inventory to the network.
+     */
+    private void publish(String name) {
+
+        ServerTarget target = platform.target();
+
+        Inventory inventory = Inventory.builder()
+                .server(name)
+                .platform(target.platform().id())
+                .minecraft(target.gameVersion())
+                .catalog(platform.version())
+                .publishedAt(Instant.now())
+                .plugins(Inventory.plugins(tracking.all(), updatesByProject()))
+                .untracked(library.untracked().size())
+                .build();
+
+        network.publish(name, Json.gson().toJson(inventory)).whenComplete((done, error) -> {
+            if (error != null) {
+                Logger.warn(CatalogAction.NETWORK, "Could not publish " + name + ": " + Errors.rootMessage(error));
+            }
+        });
     }
 
     private void banner() {
