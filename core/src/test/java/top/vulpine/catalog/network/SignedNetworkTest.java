@@ -1,7 +1,10 @@
 package top.vulpine.catalog.network;
 
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import top.vulpine.commons.log.Logger;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -24,6 +27,11 @@ class SignedNetworkTest {
     private final Store store = new Store();
 
     private final SignedNetwork network = new SignedNetwork(store, SECRET);
+
+    @BeforeAll
+    static void logger() {
+        Logger.builder().logger(ComponentLogger.logger("Catalog")).build();
+    }
 
     private Map<String, String> read() {
         return network.inventories().toCompletableFuture().join();

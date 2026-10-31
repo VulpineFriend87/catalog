@@ -1,5 +1,8 @@
 package top.vulpine.catalog.network;
 
+import top.vulpine.catalog.CatalogAction;
+import top.vulpine.commons.log.Logger;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -11,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A {@link Network} whose inventories are signed with a secret every server shares.
@@ -26,6 +30,9 @@ public final class SignedNetwork implements Network {
     private final Network network;
 
     private final SecretKeySpec key;
+
+    /** The servers already reported for signing with another secret. */
+    private final Set<String> warned = ConcurrentHashMap.newKeySet();
 
     /**
      * @param secret the secret every server on the network shares
@@ -68,6 +75,11 @@ public final class SignedNetwork implements Network {
 
                 if (inventory != null) {
                     out.put(entry.getKey(), inventory);
+                    warned.remove(entry.getKey());
+                } else if (warned.add(entry.getKey())) {
+                    Logger.warn(CatalogAction.NETWORK, "Ignoring " + entry.getKey()
+                            + ": it signs with a different network.secret. Copy the secret from one"
+                            + " server to all the others.");
                 }
             }
 

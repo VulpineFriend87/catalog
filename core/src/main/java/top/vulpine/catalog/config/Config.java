@@ -106,8 +106,8 @@ public class Config extends OkaeriConfig {
         @CustomKey("server_name")
         public String serverName = "";
 
-        @Comment("A secret of at least 16 characters, the same on every server. Inventories signed")
-        @Comment("with another secret are ignored.")
+        @Comment("Generated on the first start. Copy it from one server to all the others:")
+        @Comment("inventories signed with another secret are ignored.")
         @CustomKey("secret")
         public String secret = "";
 

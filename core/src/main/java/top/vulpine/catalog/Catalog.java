@@ -46,9 +46,11 @@ import top.vulpine.commons.log.Logger;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -133,6 +135,7 @@ public final class Catalog {
     public boolean start() {
 
         banner();
+        generateSecret();
 
         Path data = platform.dataFolder();
 
@@ -327,6 +330,23 @@ public final class Catalog {
         });
 
         network.inventories().thenAccept(this::remember);
+    }
+
+    /**
+     * Writes a random network secret into the config when it has none.
+     */
+    private void generateSecret() {
+
+        Config config = configuration.get();
+
+        if (!config.network.secret.isEmpty()) {
+            return;
+        }
+
+        byte[] bytes = new byte[24];
+        new SecureRandom().nextBytes(bytes);
+        config.network.secret = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        config.save();
     }
 
     private void banner() {
