@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.command.screen.widget.Pager;
 import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.modrinth.model.SearchHit;
+import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.modrinth.model.SearchResults;
 
 import java.util.ArrayList;
@@ -25,8 +26,12 @@ public final class SearchPage {
     private SearchPage() {
     }
 
+    /**
+     * @param peers the servers on the network, or none while it is off
+     * @param self  the name of this server, or null while the network is off
+     */
     public static List<Component> search(String query, SearchResults results, int page,
-                                         Set<String> installedProjects) {
+                                         Set<String> installedProjects, List<Peer> peers, String self) {
 
         List<Component> out = new ArrayList<>();
 
@@ -44,7 +49,15 @@ public final class SearchPage {
         }
 
         for (SearchHit hit : results.hits()) {
-            out.add(hit(hit, installedProjects.contains(hit.projectId())));
+
+            String where = where(hit, peers, self);
+
+            // Found for the Minecraft versions of no server.
+            if (where != null && where.isEmpty()) {
+                continue;
+            }
+
+            out.add(hit(hit, installedProjects.contains(hit.projectId()), where));
         }
 
         Pager pager = Pager.of(results.totalHits(), PAGE, page);
@@ -58,7 +71,37 @@ public final class SearchPage {
         return out;
     }
 
-    private static Component hit(SearchHit result, boolean installed) {
+    /**
+     * The server a result runs on when it does not run here.
+     *
+     * @return null when it runs here or the network is off, empty when it runs on no server
+     */
+    private static String where(SearchHit hit, List<Peer> peers, String self) {
+
+        String elsewhere = "";
+
+        for (Peer peer : peers) {
+
+            if (!peer.runs(hit.categories(), hit.versions())) {
+                continue;
+            }
+
+            if (peer.name().equals(self)) {
+                return null;
+            }
+
+            if (elsewhere.isEmpty()) {
+                elsewhere = peer.name();
+            }
+        }
+
+        return peers.isEmpty() ? null : elsewhere;
+    }
+
+    /**
+     * @param where the server it runs on when it does not run here, or null
+     */
+    private static Component hit(SearchHit result, boolean installed, String where) {
 
         Component info = Component.text(result.title(), TEXT)
                 .append(Component.newline())
@@ -74,6 +117,7 @@ public final class SearchPage {
                         .append(Component.text(result.title(), TEXT))
                         .append(Component.text("  " + compact(result.downloads()), MUTED))
                         .append(installed ? Component.text("  installed", DONE) : Component.empty())
+                        .append(where == null ? Component.empty() : Component.text("  " + where, PENDING))
                         .build(),
                 from(command, null),
                 info.append(Component.newline()).append(Component.newline())

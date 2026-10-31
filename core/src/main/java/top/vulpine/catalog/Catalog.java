@@ -22,6 +22,7 @@ import top.vulpine.catalog.modrinth.model.SearchResults;
 import top.vulpine.catalog.network.Network;
 import top.vulpine.catalog.network.Presence;
 import top.vulpine.catalog.network.RedisNetwork;
+import top.vulpine.catalog.network.SignedNetwork;
 import top.vulpine.catalog.network.model.Inventory;
 import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.platform.ExitTasks;
@@ -50,9 +51,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -65,6 +68,9 @@ public final class Catalog {
 
     /** How long changes are gathered before the inventory goes out. */
     private static final Duration SETTLE = Duration.ofSeconds(1);
+
+    /** The shortest secret the network accepts. */
+    private static final int SECRET_LENGTH = 16;
 
     /** What a server name on the network may hold. */
     private static final Pattern SERVER_NAME = Pattern.compile("[a-z0-9_-]{1,32}");
@@ -203,9 +209,15 @@ public final class Catalog {
             return;
         }
 
+        if (settings.secret.length() < SECRET_LENGTH) {
+            Logger.error(CatalogAction.NETWORK, "network.secret must be at least " + SECRET_LENGTH
+                    + " characters and the same on every server. The network is off.");
+            return;
+        }
+
         try {
-            network = RedisNetwork.connect(settings.redis, settings.password,
-                    Duration.ofDays(Math.max(settings.offlineDays, 0)));
+            network = new SignedNetwork(RedisNetwork.connect(settings.redis.address(),
+                    Duration.ofDays(Math.max(settings.offlineDays, 0))), settings.secret);
         } catch (RuntimeException e) {
             Logger.error(CatalogAction.NETWORK, "Could not connect to Redis: " + Errors.rootMessage(e)
                     + ". The network is off.");
@@ -224,7 +236,7 @@ public final class Catalog {
      */
     private void remember(Map<String, String> inventories) {
 
-        Set<String> plugins = new java.util.TreeSet<>();
+        Set<String> plugins = new TreeSet<>();
 
         for (String json : inventories.values()) {
             for (Inventory.Plugin plugin : Json.gson().fromJson(json, Inventory.class).plugins()) {
@@ -490,6 +502,35 @@ public final class Catalog {
 
     public SearchResults search(String query, int limit, int offset) {
         return projects.search(query, limit, offset);
+    }
+
+    /**
+     * Searches Modrinth for what runs on any server of the network.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     */
+    public SearchResults search(String query, int limit, int offset, List<Peer> peers) {
+
+        Set<String> loaders = new LinkedHashSet<>();
+        Set<String> versions = new LinkedHashSet<>();
+        boolean proxy = false;
+
+        for (Peer peer : peers) {
+
+            if (peer.platform() == null) {
+                continue;
+            }
+
+            loaders.addAll(peer.platform().loaders());
+            proxy |= peer.platform().isProxy();
+
+            if (!peer.platform().isProxy() && peer.inventory().serverVersion() != null) {
+                versions.add(peer.inventory().serverVersion());
+            }
+        }
+
+        // A proxy runs plugins for any Minecraft version.
+        return projects.search(query, limit, offset, loaders, proxy ? List.of() : versions);
     }
 
     public ModrinthProject project(String idOrSlug) {

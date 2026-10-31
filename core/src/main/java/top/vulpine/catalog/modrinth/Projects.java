@@ -66,20 +66,24 @@ public final class Projects {
     public SearchResults search(String query, int limit, int offset) {
 
         ServerTarget target = platform.target();
+        return search(query, limit, offset, target.loaders(),
+                target.gameVersion() == null ? List.of() : List.of(target.gameVersion()));
+    }
+
+    /**
+     * Searches Modrinth for what runs on any of the given loaders and Minecraft versions.
+     *
+     * @param gameVersions the versions to accept, or none to accept every version
+     */
+    public SearchResults search(String query, int limit, int offset, Collection<String> loaders,
+                                Collection<String> gameVersions) {
+
         List<List<String>> facets = new ArrayList<>();
-
         facets.add(List.of("project_type:plugin"));
+        facets.add(loaders.stream().map(loader -> "categories:" + loader).toList());
 
-        List<String> loaders = new ArrayList<>();
-
-        for (String loader : target.loaders()) {
-            loaders.add("categories:" + loader);
-        }
-
-        facets.add(loaders);
-
-        if (target.gameVersion() != null) {
-            facets.add(List.of("versions:" + target.gameVersion()));
+        if (!gameVersions.isEmpty()) {
+            facets.add(gameVersions.stream().map(version -> "versions:" + version).toList());
         }
 
         return modrinth.search(query, facets, limit, offset).join();

@@ -357,8 +357,10 @@ public final class Screens {
 
         try {
 
-            SearchResults results = catalog.search(query, SearchPage.PAGE,
-                    (page - 1) * SearchPage.PAGE);
+            List<Peer> peers = peers();
+            SearchResults results = peers.size() > 1
+                    ? catalog.search(query, SearchPage.PAGE, (page - 1) * SearchPage.PAGE, peers)
+                    : catalog.search(query, SearchPage.PAGE, (page - 1) * SearchPage.PAGE);
 
             // Text search does not match project ids. A one-word query that found nothing is tried as one.
             if (results.hits().isEmpty() && !query.contains(" ")) {
@@ -366,7 +368,8 @@ public final class Screens {
                 return;
             }
 
-            send(viewer, SearchPage.search(query, results, page, lookup.trackedProjectIds()));
+            send(viewer, SearchPage.search(query, results, page, lookup.trackedProjectIds(),
+                    peers.size() > 1 ? peers : List.of(), catalog.getServerName()));
 
         } catch (Exception e) {
             send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));

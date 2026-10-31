@@ -11,7 +11,6 @@ import top.vulpine.catalog.modrinth.model.ModrinthProject;
 import top.vulpine.catalog.network.model.Inventory;
 import top.vulpine.catalog.network.model.Peer;
 import top.vulpine.catalog.tracking.model.TrackedPlugin;
-import top.vulpine.catalog.update.model.ServerPlatform;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -132,7 +131,7 @@ public final class ServersPage {
                     local.awaitingRestart()), Component.text(peer.name(), BRAND), actions);
         }
 
-        if (!runs(project, peer.inventory())) {
+        if (!peer.runs(project.loaders(), project.gameVersions())) {
             return row(null, Component.text(peer.name(), BRAND),
                     List.of(Component.text("not for this server", MUTED)));
         }
@@ -167,7 +166,7 @@ public final class ServersPage {
                     name, actions);
         }
 
-        if (!runs(project, peer.inventory())) {
+        if (!peer.runs(project.loaders(), project.gameVersions())) {
             return row(null, name, List.of(Component.text("not for this server", MUTED)));
         }
 
@@ -222,33 +221,6 @@ public final class ServersPage {
                 .append(Component.text("]", MUTED))
                 .hoverEvent(HoverEvent.showText(
                         Component.text("Not available on other servers yet", MUTED)));
-    }
-
-    /**
-     * Whether a project publishes for a server's platform and Minecraft version.
-     */
-    private static boolean runs(ModrinthProject project, Inventory inventory) {
-
-        ServerPlatform platform = platform(inventory.platform());
-
-        if (platform == null || project.loaders() == null
-                || project.loaders().stream().noneMatch(platform.loaders()::contains)) {
-            return false;
-        }
-
-        return platform.isProxy() || project.gameVersions() == null
-                || project.gameVersions().contains(inventory.serverVersion());
-    }
-
-    private static ServerPlatform platform(String id) {
-
-        for (ServerPlatform platform : ServerPlatform.values()) {
-            if (platform.id().equals(id)) {
-                return platform;
-            }
-        }
-
-        return null;
     }
 
     private static Inventory.Plugin find(Peer peer, ModrinthProject project) {

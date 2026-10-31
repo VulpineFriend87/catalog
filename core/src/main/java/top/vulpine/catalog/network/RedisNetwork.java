@@ -5,7 +5,6 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.RedisClient;
 import redis.clients.jedis.params.SetParams;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,21 +50,24 @@ public final class RedisNetwork implements Network {
      *
      * <p>Blocks, so it must be called off the main thread.</p>
      *
-     * @param address  {@code redis://host:port}
-     * @param password the password, or empty for none
-     * @param keep     how long an offline server stays listed
+     * @param keep how long an offline server stays listed
      */
-    public static RedisNetwork connect(String address, String password, Duration keep) {
+    public static RedisNetwork connect(Address address, Duration keep) {
 
-        URI uri = URI.create(address);
-        DefaultJedisClientConfig.Builder config = DefaultJedisClientConfig.builder();
+        DefaultJedisClientConfig.Builder config = DefaultJedisClientConfig.builder()
+                .database(address.database())
+                .ssl(address.tls());
 
-        if (!password.isEmpty()) {
-            config.password(password);
+        if (!address.username().isEmpty()) {
+            config.user(address.username());
+        }
+
+        if (!address.password().isEmpty()) {
+            config.password(address.password());
         }
 
         RedisClient redis = RedisClient.builder()
-                .hostAndPort(new HostAndPort(uri.getHost(), uri.getPort() < 0 ? 6379 : uri.getPort()))
+                .hostAndPort(new HostAndPort(address.host(), address.port()))
                 .clientConfig(config.build())
                 .build();
 
@@ -201,6 +203,16 @@ public final class RedisNetwork implements Network {
 
     private <T> CompletionStage<T> run(Supplier<T> call) {
         return CompletableFuture.supplyAsync(call, executor);
+    }
+
+    /**
+     * Where a Redis server is and how to log in to it.
+     *
+     * @param username the ACL user, or empty for the default one
+     * @param password the password, or empty for none
+     */
+    public record Address(String host, int port, String username, String password, int database,
+                          boolean tls) {
     }
 
     private static String alive(String server) {

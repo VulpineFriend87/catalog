@@ -5,6 +5,7 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
 import top.vulpine.catalog.modrinth.model.ReleaseChannel;
+import top.vulpine.catalog.network.RedisNetwork;
 import top.vulpine.catalog.tracking.model.TrackingDefaults;
 import top.vulpine.commons.log.LogLevel;
 
@@ -105,17 +106,49 @@ public class Config extends OkaeriConfig {
         @CustomKey("server_name")
         public String serverName = "";
 
-        @Comment("The Redis server, as redis://host:port.")
-        @CustomKey("redis")
-        public String redis = "redis://localhost:6379";
-
-        @Comment("The Redis password. Leave empty when there is none.")
-        @CustomKey("password")
-        public String password = "";
+        @Comment("A secret of at least 16 characters, the same on every server. Inventories signed")
+        @Comment("with another secret are ignored.")
+        @CustomKey("secret")
+        public String secret = "";
 
         @Comment("How many days a server that went offline stays listed. 0 lists only online servers.")
         @CustomKey("offline_days")
         public int offlineDays = 7;
+
+        @Comment("The Redis server every Catalog server connects to.")
+        @CustomKey("redis")
+        public Redis redis = new Redis();
+
+    }
+
+    public static class Redis extends OkaeriConfig {
+
+        @CustomKey("host")
+        public String host = "localhost";
+
+        @CustomKey("port")
+        public int port = 6379;
+
+        @Comment("Leave empty for the default user.")
+        @CustomKey("username")
+        public String username = "";
+
+        @Comment("Leave empty when there is none.")
+        @CustomKey("password")
+        public String password = "";
+
+        @CustomKey("database")
+        public int database = 0;
+
+        @CustomKey("tls")
+        public boolean tls = false;
+
+        /**
+         * @return where and how to connect
+         */
+        public RedisNetwork.Address address() {
+            return new RedisNetwork.Address(host, port, username, password, database, tls);
+        }
 
     }
 
