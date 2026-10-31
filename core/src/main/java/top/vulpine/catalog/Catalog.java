@@ -53,6 +53,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -61,6 +62,9 @@ import java.util.regex.Pattern;
  */
 @Getter
 public final class Catalog {
+
+    /** How long changes are gathered before the inventory goes out. */
+    private static final Duration SETTLE = Duration.ofSeconds(1);
 
     /** What a server name on the network may hold. */
     private static final Pattern SERVER_NAME = Pattern.compile("[a-z0-9_-]{1,32}");
@@ -92,11 +96,17 @@ public final class Catalog {
     private volatile Network network;
     private volatile Presence presence;
 
+    /** Whether a publish is already on its way. */
+    private final AtomicBoolean publishing = new AtomicBoolean();
+
     /** This server's name on the network, or null while the network is off. */
     private volatile String serverName;
 
     /** The names on the network as of the last publish. Read by tab completion. */
     private volatile List<String> knownServers = List.of();
+
+    /** The slugs installed anywhere on the network as of the last publish. Read by tab completion. */
+    private volatile List<String> knownPlugins = List.of();
 
     /** Every Minecraft version Modrinth knows. Loaded on first use. */
     private volatile GameVersions gameVersions;
@@ -208,6 +218,27 @@ public final class Catalog {
     }
 
     /**
+     * Keeps the names tab completion offers.
+     *
+     * @param inventories every published inventory as JSON by server name
+     */
+    private void remember(Map<String, String> inventories) {
+
+        Set<String> plugins = new java.util.TreeSet<>();
+
+        for (String json : inventories.values()) {
+            for (Inventory.Plugin plugin : Json.gson().fromJson(json, Inventory.class).plugins()) {
+                if (plugin.slug() != null) {
+                    plugins.add(plugin.slug());
+                }
+            }
+        }
+
+        knownServers = inventories.keySet().stream().sorted().toList();
+        knownPlugins = List.copyOf(plugins);
+    }
+
+    /**
      * Every server on the network, this one included. Sorted by name.
      *
      * <p>Blocks, so it must be called off the main thread.</p>
@@ -278,11 +309,12 @@ public final class Catalog {
 
         network.publish(name, Json.compact().toJson(inventory)).whenComplete((done, error) -> {
             if (error != null) {
-                Logger.warn(CatalogAction.NETWORK, "Could not publish " + name + ": " + Errors.rootMessage(error));
+                Logger.warn(CatalogAction.NETWORK, "Could not publish " + name + ": "
+                        + Errors.rootMessage(error));
             }
         });
 
-        network.inventories().thenAccept(names -> knownServers = names.keySet().stream().sorted().toList());
+        network.inventories().thenAccept(this::remember);
     }
 
     private void banner() {
@@ -354,6 +386,8 @@ public final class Catalog {
         if (indexed) {
             updates.check();
         }
+
+        changed();
     }
 
     private void scheduleUpdateChecks() {
@@ -365,7 +399,10 @@ public final class Catalog {
             return;
         }
 
-        platform.repeat(updates::check, Duration.ofMinutes(minutes));
+        platform.repeat(() -> {
+            updates.check();
+            changed();
+        }, Duration.ofMinutes(minutes));
         Logger.debug(CatalogAction.SETUP, "Checking for updates every " + minutes + " minutes.");
     }
 
@@ -380,6 +417,7 @@ public final class Catalog {
         if (dropped > 0) {
             Logger.debug(CatalogAction.SETUP, "Emptied " + dropped + " removals older than "
                     + days + " days from the trash.");
+            changed();
         }
     }
 
@@ -403,6 +441,8 @@ public final class Catalog {
         } catch (TrackingException e) {
             Logger.error(CatalogAction.TRACK, e.getMessage());
             return updates.open();
+        } finally {
+            changed();
         }
     }
 
@@ -535,11 +575,11 @@ public final class Catalog {
     // Installing
 
     public void stage(UpdateCandidate candidate, String by) {
-        saving(() -> installer.stage(candidate, by));
+        changing(() -> installer.stage(candidate, by));
     }
 
     public void stage(TrackedPlugin plugin, ModrinthVersion version, String by, Event as) {
-        saving(() -> installer.stage(plugin, version, by, as));
+        changing(() -> installer.stage(plugin, version, by, as));
     }
 
     /**
@@ -555,6 +595,8 @@ public final class Catalog {
         } catch (TrackingException e) {
             Logger.error(CatalogAction.TRACK, e.getMessage());
             return false;
+        } finally {
+            changed();
         }
     }
 
@@ -574,6 +616,8 @@ public final class Catalog {
             return installer.install(pending, by);
         } catch (TrackingException e) {
             throw new InstallException(e.getMessage(), e);
+        } finally {
+            changed();
         }
     }
 
@@ -597,6 +641,8 @@ public final class Catalog {
             return removals.uninstall(plugin, by);
         } catch (TrackingException e) {
             throw new InstallException(e.getMessage(), e);
+        } finally {
+            changed();
         }
     }
 
@@ -634,29 +680,37 @@ public final class Catalog {
             return removals.restore(entry, by);
         } catch (TrackingException e) {
             throw new InstallException(e.getMessage(), e);
+        } finally {
+            changed();
         }
     }
 
     public void discardTrashed(TrashEntry entry, String by) {
         removals.discard(entry, by);
+        changed();
     }
 
     public int emptyTrash(String by) {
-        return removals.empty(by);
+
+        try {
+            return removals.empty(by);
+        } finally {
+            changed();
+        }
     }
 
     // Settings
 
     public void setChannel(TrackedPlugin plugin, ReleaseChannel channel, String by) {
-        saving(() -> settings.channel(plugin, channel, by));
+        changing(() -> settings.channel(plugin, channel, by));
     }
 
     public void setAutoUpdate(TrackedPlugin plugin, boolean on, String by) {
-        saving(() -> settings.autoUpdate(plugin, on, by));
+        changing(() -> settings.autoUpdate(plugin, on, by));
     }
 
     public void setSoak(TrackedPlugin plugin, int minutes, String by) {
-        saving(() -> settings.soak(plugin, minutes, by));
+        changing(() -> settings.soak(plugin, minutes, by));
     }
 
     public int defaultSoakMinutes() {
@@ -664,7 +718,7 @@ public final class Catalog {
     }
 
     public void setHeld(TrackedPlugin plugin, boolean held, String by) {
-        saving(() -> settings.held(plugin, held, by));
+        changing(() -> settings.held(plugin, held, by));
     }
 
     // Tracking
@@ -680,6 +734,7 @@ public final class Catalog {
 
         // The scan fills the untracked list.
         library.index();
+        changed();
     }
 
     /**
@@ -695,6 +750,7 @@ public final class Catalog {
         }
 
         library.index(by);
+        changed();
         return true;
     }
 
@@ -736,6 +792,32 @@ public final class Catalog {
         } catch (TrackingException e) {
             Logger.error(CatalogAction.TRACK, e.getMessage());
         }
+    }
+
+    /**
+     * Runs {@code work} like {@link #saving} and publishes the change.
+     */
+    private void changing(Save work) {
+        saving(work);
+        changed();
+    }
+
+    /**
+     * Sends this server's inventory to the network shortly. Changes within {@link #SETTLE} go out
+     * together.
+     */
+    private void changed() {
+
+        Presence current = presence;
+
+        if (current == null || !current.held() || !publishing.compareAndSet(false, true)) {
+            return;
+        }
+
+        platform.later(() -> {
+            publishing.set(false);
+            publish(serverName);
+        }, SETTLE);
     }
 
     @FunctionalInterface

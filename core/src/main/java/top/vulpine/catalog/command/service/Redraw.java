@@ -85,6 +85,11 @@ public final class Redraw {
         }
 
         @Override
+        public void servers(Screen.ServersScreen screen) {
+            screens.showServers(viewer, screen.slug(), Trail.parent(data), 1);
+        }
+
+        @Override
         public void info(Screen.InfoScreen screen) {
             screens.showProject(viewer, screen.slug());
         }
@@ -97,11 +102,6 @@ public final class Redraw {
             if (tracked != null) {
                 screens.showSettings(viewer, tracked, Trail.parent(data));
             }
-        }
-
-        @Override
-        public void dependencies(Screen.DependenciesScreen screen) {
-            screens.showDependencies(viewer, screen.slug(), screen.versionId(), Trail.parent(data));
         }
 
         @Override

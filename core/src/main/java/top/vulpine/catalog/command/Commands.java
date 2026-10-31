@@ -57,7 +57,7 @@ public final class Commands {
         this.commands = List.of(
                 new CatalogCommand(catalog),
                 new ListCommand(context, chat, screens),
-                new InfoCommand(context, chat, screens),
+                new InfoCommand(chat, screens),
                 new VersionsCommand(catalog, context, chat, confirmations, lookup),
                 new InstallCommand(context, chat, installs),
                 new UpdateCommand(catalog, context, chat, lookup, installs, redraw),

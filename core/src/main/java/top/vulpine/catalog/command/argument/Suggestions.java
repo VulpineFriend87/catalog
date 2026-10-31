@@ -72,6 +72,16 @@ public final class Suggestions {
 
     }
 
+    /** The plugins installed anywhere on the network as of the last publish. */
+    public static final class NetworkPlugins implements SuggestionProvider<CommandActor> {
+
+        @Override
+        public Collection<String> getSuggestions(@NotNull ExecutionContext<CommandActor> context) {
+            return matching(context, context.lamp().dependency(Catalog.class).getKnownPlugins());
+        }
+
+    }
+
     /** The servers on the network as of the last publish. */
     public static final class Servers implements SuggestionProvider<CommandActor> {
 

@@ -4,8 +4,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import top.vulpine.catalog.command.navigation.ClickContext;
 import top.vulpine.catalog.command.navigation.Press;
+import top.vulpine.catalog.command.permission.Permitted;
 import top.vulpine.catalog.command.screen.Change;
 import top.vulpine.catalog.install.DependencyResolver;
+import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthVersion;
 
 import java.util.ArrayList;
@@ -85,7 +87,7 @@ public final class ChangePage {
             out.add(Component.empty());
 
             for (DependencyResolver.Requirement row : needs) {
-                out.add(DependenciesPage.dependencyRow(row, here));
+                out.add(dependencyRow(row, here));
             }
         }
 
@@ -115,6 +117,54 @@ public final class ChangePage {
         out.add(buttons(row));
 
         return out;
+    }
+
+    /**
+     * One declared project and its state on this server.
+     */
+    private static Component dependencyRow(DependencyResolver.Requirement row, String here) {
+
+        TextComponent.Builder line = line().append(Component.text(INDENT));
+
+        if (row.conflicting()) {
+            return line
+                    .append(Component.text("  "))
+                    .append(Component.text(row.name(), DANGER))
+                    .append(Component.text("  incompatible, installed", MUTED))
+                    .build();
+        }
+
+        boolean optional = row.type() == DependencyType.OPTIONAL;
+        String kind = optional ? "  optional" : "  required";
+
+        if (row.installed()) {
+            return line
+                    .append(Component.text("✔ ", DONE))
+                    .append(Component.text(row.name(), TEXT))
+                    .append(Component.text(kind, MUTED))
+                    .append(Component.text(row.version() == null ? "" : "  " + row.version(), MUTED))
+                    .build();
+        }
+
+        line.append(Component.text("  "))
+                .append(Component.text(row.name(), optional ? MUTED : PENDING))
+                .append(Component.text(kind, MUTED))
+                .append(Component.space());
+
+        if (row.available() == null) {
+            return line.append(Component.text(" no build for this server", DANGER)).build();
+        }
+
+        return line
+                .append(button("Install", from("/catalog install " + row.slug(), here), BRAND,
+                        "Install " + row.name() + " " + row.version()))
+                .append(Component.space())
+                .append(Permitted.unless("/catalog install " + row.slug(),
+                        button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
+                                "Choose a build of " + row.name()),
+                        button("Versions", from("/catalog versions " + row.slug(), here), MUTED,
+                                "The newest release, beta and alpha of " + row.name())))
+                .build();
     }
 
 }

@@ -11,6 +11,7 @@ import revxrsal.commands.annotation.SuggestWith;
 import revxrsal.commands.orphan.OrphanCommand;
 import top.vulpine.catalog.command.argument.Suggestions;
 import top.vulpine.catalog.command.navigation.ClickContext;
+import top.vulpine.catalog.command.navigation.Press;
 import top.vulpine.catalog.command.permission.RequiresPermission;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.service.Chat;
@@ -22,7 +23,7 @@ import java.util.List;
 import static top.vulpine.catalog.command.service.Chat.send;
 
 /**
- * {@code /catalog network} and {@code switch}.
+ * {@code /catalog network}, {@code servers} and {@code switch}.
  */
 public final class NetworkCommand implements OrphanCommand {
 
@@ -48,6 +49,17 @@ public final class NetworkCommand implements OrphanCommand {
 
         context.take(viewer);
         chat.runAsync(viewer, () -> screens.showNetwork(viewer));
+    }
+
+    @Subcommand("servers")
+    @Description("Where a plugin is installed")
+    @RequiresPermission("command.network")
+    public void servers(Viewer viewer,
+                        @Named("plugin") @SuggestWith(Suggestions.NetworkPlugins.class) String plugin,
+                        @Flag("page") @Default("1") int page) {
+
+        String from = Press.screenOf(context.take(viewer));
+        chat.runAsync(viewer, () -> screens.showServers(viewer, plugin, from, Math.max(page, 1)));
     }
 
     @Subcommand("switch")

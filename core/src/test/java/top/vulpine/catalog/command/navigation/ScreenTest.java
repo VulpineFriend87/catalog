@@ -24,8 +24,6 @@ class ScreenTest {
                 new Screen.TrashScreen(),
                 new Screen.InfoScreen("luckperms"),
                 new Screen.SettingsScreen("luckperms"),
-                new Screen.DependenciesScreen("chunkyborder", null),
-                new Screen.DependenciesScreen("chunkyborder", "asaBBItO"),
                 new Screen.ChangeScreen("install", "luckperms", "abc"),
                 new Screen.ChangeScreen("update", "luckperms", null));
 
@@ -38,8 +36,6 @@ class ScreenTest {
     @DisplayName("a screen reopens with the command that opened it")
     void reopen() {
         assertEquals("/catalog list --updates", new Screen.ListScreen(Set.of(ListFilter.UPDATES)).reopen());
-        assertEquals("/catalog dependencies chunkyborder asaBBItO",
-                new Screen.DependenciesScreen("chunkyborder", "asaBBItO").reopen());
         assertEquals("/catalog install luckperms abc", new Screen.ChangeScreen("install", "luckperms", "abc").reopen());
     }
 

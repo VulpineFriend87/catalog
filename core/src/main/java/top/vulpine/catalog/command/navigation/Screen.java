@@ -39,7 +39,8 @@ public sealed interface Screen {
 
         void settings(SettingsScreen screen);
 
-        void dependencies(DependenciesScreen screen);
+        void servers(ServersScreen screen);
+
 
         void change(ChangeScreen screen);
 
@@ -71,8 +72,8 @@ public sealed interface Screen {
             return new SettingsScreen(token.substring(SettingsScreen.PREFIX.length()));
         }
 
-        if (token.startsWith(DependenciesScreen.PREFIX)) {
-            return DependenciesScreen.parse(token);
+        if (token.startsWith(ServersScreen.PREFIX)) {
+            return new ServersScreen(token.substring(ServersScreen.PREFIX.length()));
         }
 
         if (token.startsWith(ChangeScreen.PREFIX)) {
@@ -207,36 +208,25 @@ public sealed interface Screen {
     }
 
     /**
-     * What one build declares.
-     *
-     * @param versionId the build, or null for the one the command picks
+     * Where one plugin is installed across the network.
      */
-    record DependenciesScreen(String slug, String versionId) implements Screen {
+    record ServersScreen(String slug) implements Screen {
 
-        private static final String PREFIX = "deps:";
+        private static final String PREFIX = "servers:";
 
         @Override
         public String token() {
-            return PREFIX + slug + (versionId == null ? "" : "@" + versionId);
+            return PREFIX + slug;
         }
 
         @Override
         public String reopen() {
-            return "/catalog dependencies " + slug + (versionId == null ? "" : " " + versionId);
+            return "/catalog servers " + slug;
         }
 
         @Override
         public void accept(Visitor visitor) {
-            visitor.dependencies(this);
-        }
-
-        private static DependenciesScreen parse(String token) {
-
-            String about = token.substring(PREFIX.length());
-            int at = about.indexOf('@');
-
-            return at < 0 ? new DependenciesScreen(about, null)
-                    : new DependenciesScreen(about.substring(0, at), about.substring(at + 1));
+            visitor.servers(this);
         }
 
     }

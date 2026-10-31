@@ -1,5 +1,6 @@
 package top.vulpine.catalog.command.service;
 
+import net.kyori.adventure.text.Component;
 import top.vulpine.catalog.Catalog;
 import top.vulpine.catalog.Errors;
 import top.vulpine.catalog.command.argument.ListFilter;
@@ -8,15 +9,16 @@ import top.vulpine.catalog.command.navigation.Screen;
 import top.vulpine.catalog.command.navigation.Trail;
 import top.vulpine.catalog.command.screen.Change;
 import top.vulpine.catalog.command.screen.ChangePage;
-import top.vulpine.catalog.command.screen.DependenciesPage;
 import top.vulpine.catalog.command.screen.InfoPage;
 import top.vulpine.catalog.command.screen.ListPage;
 import top.vulpine.catalog.command.screen.NetworkPage;
 import top.vulpine.catalog.command.screen.Outcomes;
 import top.vulpine.catalog.command.screen.SearchPage;
+import top.vulpine.catalog.command.screen.ServersPage;
 import top.vulpine.catalog.command.screen.SettingsPage;
 import top.vulpine.catalog.command.screen.TrashPage;
 import top.vulpine.catalog.install.DependencyResolver;
+import top.vulpine.catalog.jar.model.InstalledJar;
 import top.vulpine.catalog.modrinth.Projects;
 import top.vulpine.catalog.modrinth.model.DependencyType;
 import top.vulpine.catalog.modrinth.model.ModrinthProject;
@@ -54,42 +56,6 @@ public final class Screens {
         this.chat = chat;
         this.confirmations = confirmations;
         this.lookup = lookup;
-    }
-
-    /**
-     * Sends what one build declares.
-     */
-    public void showDependencies(Viewer viewer, String query, String wanted, String from) {
-
-        try {
-
-            ModrinthProject project = lookup.projectFor(query);
-
-            if (project == null) {
-                send(viewer, Outcomes.unknownPlugin(query));
-                return;
-            }
-
-            ModrinthVersion version = lookup.build(project, wanted, wanted != null);
-
-            if (version == null) {
-                send(viewer, wanted == null
-                        ? Outcomes.noBuild(project.title())
-                        : Outcomes.noVersion(project.title(), wanted));
-                return;
-            }
-
-            DependencyResolver.Resolution resolution = catalog.dependenciesOf(version);
-
-            List<DependencyResolver.Requirement> declared = new ArrayList<>(resolution.required());
-            declared.addAll(resolution.optional());
-            declared.addAll(resolution.conflicts());
-
-            send(viewer, DependenciesPage.dependencies(project, version, catalog.named(declared), from));
-
-        } catch (Exception e) {
-            send(viewer, Outcomes.failed(Errors.rootMessage(e)));
-        }
     }
 
     /**
@@ -313,18 +279,67 @@ public final class Screens {
 
             List<ModrinthVersion> compatible = lookup.compatibleOrEmpty(project.id());
             ModrinthVersion latest = Lookup.newestOn(compatible, channel);
+            ModrinthVersion target = Projects.installTarget(compatible);
+            InstalledJar untracked = tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null;
 
-            send(viewer, InfoPage.project(project, lookup.author(project.id()), latest,
-                    Projects.installTarget(compatible), tracked,
-                    tracked == null ? catalog.getLibrary().untrackedJar(project.id()) : null,
-                    catalog.isSelf(tracked),
-                    catalog.declared(latest, DependencyType.REQUIRED),
-                    catalog.declared(latest, DependencyType.OPTIONAL),
-                    catalog.platformLoaders(), catalog.gameVersions()));
+            // The dependencies of the build the page is about.
+            ModrinthVersion described = tracked != null ? lookup.installedBuild(tracked)
+                    : untracked != null ? lookup.identified(untracked) : target;
+
+            send(viewer, InfoPage.project(project, lookup.author(project.id()), latest, target, tracked,
+                    untracked, catalog.isSelf(tracked),
+                    catalog.declared(described, DependencyType.REQUIRED),
+                    catalog.declared(described, DependencyType.OPTIONAL),
+                    catalog.platformLoaders(), catalog.gameVersions(), serversButton(project)));
 
         } catch (Exception e) {
             send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));
         }
+    }
+
+    /**
+     * Sends where a plugin is installed across the network.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     */
+    public void showServers(Viewer viewer, String query, String from, int page) {
+
+        confirmations.abandon(viewer);
+
+        if (catalog.getServerName() == null) {
+            send(viewer, Outcomes.networkOff());
+            return;
+        }
+
+        try {
+
+            ModrinthProject project = lookup.projectFor(query);
+
+            if (project == null) {
+                send(viewer, Outcomes.unknownPlugin(query));
+                return;
+            }
+
+            TrackedPlugin local = catalog.getTracking().byProjectId(project.id());
+            boolean update = local != null && !local.pendingLoad()
+                    && catalog.updatesByProject().containsKey(project.id());
+
+            send(viewer, ServersPage.servers(project, peers(), catalog.getServerName(), local, update,
+                    catalog.isSelf(local), from, page));
+
+        } catch (Exception e) {
+            send(viewer, Outcomes.unreachable(Errors.rootMessage(e)));
+        }
+    }
+
+    /**
+     * The button to a plugin's servers, or null while there is no other server to show.
+     */
+    private Component serversButton(ModrinthProject project) {
+
+        List<Peer> peers = peers();
+        return peers.size() > 1 ? ServersPage.serversButton(project, peers, catalog.getServerName(),
+                new Screen.InfoScreen(project.slug()).token()) : null;
     }
 
     public void runSearch(Viewer viewer, String query, int page) {

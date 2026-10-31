@@ -37,16 +37,16 @@ public final class InfoPage {
      * @param untracked     the project's jar when it is in the plugins folder but untracked
      * @param self          whether this is Catalog's own page
      * @param loaders       the loaders this server can use
+     * @param servers       the button to the plugin's servers, or null while the network is off
      */
     public static List<Component> project(ModrinthProject project, String author, ModrinthVersion latest,
                                           ModrinthVersion installTarget, TrackedPlugin installed,
                                           InstalledJar untracked, boolean self,
                                           List<DependencyResolver.Requirement> requirements,
                                           List<DependencyResolver.Requirement> optionals,
-                                          List<String> loaders, GameVersions names) {
+                                          List<String> loaders, GameVersions names, Component servers) {
 
         ModrinthVersion offered = latest != null ? latest : installTarget;
-        boolean declares = !requirements.isEmpty() || !optionals.isEmpty();
 
         List<Component> out = new ArrayList<>();
 
@@ -79,22 +79,27 @@ public final class InfoPage {
         }
 
         if (!requirements.isEmpty()) {
-            out.add(field("Needs", requirements(requirements, PENDING)));
+            out.add(field("Needs", requirements(requirements, PENDING, project.slug())));
         }
 
         if (!optionals.isEmpty()) {
-            out.add(field("Optional", requirements(optionals, MUTED)));
+            out.add(field("Optional", requirements(optionals, MUTED, project.slug())));
         }
 
         out.add(Component.empty());
 
+        Component actions;
+
         if (installed == null && untracked != null) {
-            out.add(untrackedActions(project, untracked, offered, declares));
+            actions = untrackedActions(project, untracked);
         } else if (installed == null) {
-            out.add(installActions(project, installTarget, offered, declares));
+            actions = installActions(project, installTarget);
         } else {
-            out.add(installedActions(project, installed, latest, offered, declares, self));
+            actions = installedActions(project, installed, latest, self);
         }
+
+        out.add(servers == null ? actions
+                : line().append(actions).append(Component.text("  ")).append(servers).build());
 
         return out;
     }
@@ -173,13 +178,6 @@ public final class InfoPage {
         return hover.build();
     }
 
-    /**
-     * The argument naming the build a page describes.
-     */
-    private static String described(ModrinthVersion offered) {
-        return offered == null ? "" : " " + offered.id();
-    }
-
     private static Component author(String author) {
 
         if (author == null || author.isBlank()) {
@@ -233,10 +231,15 @@ public final class InfoPage {
     }
 
     /**
+     * The declared projects. The ones not installed open their own page.
+     *
      * @param missing the colour of the ones not installed
+     * @param key     the slug of the page they are listed on
      */
     private static Component requirements(List<DependencyResolver.Requirement> requirements,
-                                          TextColor missing) {
+                                          TextColor missing, String key) {
+
+        String here = new Screen.InfoScreen(key).token();
 
         TextComponent.Builder out = Component.text();
         boolean first = true;
@@ -247,10 +250,20 @@ public final class InfoPage {
                 out.append(Component.text(", ", MUTED));
             }
 
-            out.append(Component.text(requirement.name(), requirement.installed() ? TEXT : missing)
-                    .hoverEvent(HoverEvent.showText(Component.text(
-                            requirement.installed() ? "installed" : "not installed",
-                            requirement.installed() ? MUTED : missing))));
+            if (requirement.installed() || requirement.slug() == null) {
+                out.append(Component.text(requirement.name(), requirement.installed() ? TEXT : missing)
+                        .hoverEvent(HoverEvent.showText(Component.text(
+                                requirement.installed() ? "installed" : "not installed",
+                                requirement.installed() ? MUTED : missing))));
+            } else {
+
+                String command = from("/catalog info " + requirement.slug(), here);
+
+                out.append(Permitted.link(Component.text(requirement.name(), missing), command,
+                        Component.text("not installed", missing)
+                                .append(Component.newline()).append(Component.newline())
+                                .append(explain("Open " + requirement.name(), command)), null));
+            }
 
             first = false;
         }
@@ -258,8 +271,7 @@ public final class InfoPage {
         return out.build();
     }
 
-    private static Component untrackedActions(ModrinthProject project, InstalledJar untracked,
-                                              ModrinthVersion offered, boolean declares) {
+    private static Component untrackedActions(ModrinthProject project, InstalledJar untracked) {
 
         String key = project.slug();
         String here = new Screen.InfoScreen(key).token();
@@ -272,16 +284,10 @@ public final class InfoPage {
         row.add(button("Versions", from("/catalog versions " + key, here), MUTED,
                 "The newest release, beta and alpha for this server"));
 
-        if (declares) {
-            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here),
-                    MUTED, "Show dependencies"));
-        }
-
         return buttons(row);
     }
 
-    private static Component installActions(ModrinthProject project, ModrinthVersion installTarget,
-                                            ModrinthVersion offered, boolean declares) {
+    private static Component installActions(ModrinthProject project, ModrinthVersion installTarget) {
 
         if (installTarget == null) {
             return line().append(Component.text(INDENT))
@@ -304,17 +310,11 @@ public final class InfoPage {
                         "Choose a build: the newest release, beta and alpha for this server"),
                 button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
 
-        if (declares) {
-            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here), MUTED,
-                    "Show dependencies"));
-        }
-
         return buttons(row);
     }
 
     private static Component installedActions(ModrinthProject project, TrackedPlugin installed,
-                                              ModrinthVersion latest, ModrinthVersion offered,
-                                              boolean declares, boolean self) {
+                                              ModrinthVersion latest, boolean self) {
 
         String key = project.slug();
         String here = new Screen.InfoScreen(key).token();
@@ -336,11 +336,6 @@ public final class InfoPage {
         row.add(Permitted.unless("/catalog install " + key,
                 button("Switch", versions, MUTED, "Choose a different version"),
                 button("Versions", versions, MUTED, "The newest release, beta and alpha for this server")));
-
-        if (declares) {
-            row.add(button("Dependencies", from("/catalog dependencies " + key + described(offered), here), MUTED,
-                    "Show dependencies"));
-        }
 
         row.add(button("Settings", from("/catalog settings " + key, here), MUTED,
                 "Open the settings page"));

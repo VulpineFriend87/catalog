@@ -134,6 +134,38 @@ public final class Lookup {
         }
     }
 
+    /**
+     * The build a tracked plugin has installed.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     *
+     * @return the build, or null when Modrinth cannot be reached
+     */
+    public ModrinthVersion installedBuild(TrackedPlugin tracked) {
+
+        try {
+            return catalog.getModrinth().version(tracked.versionId()).join();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * The build an untracked jar is, from its hash.
+     *
+     * <p>Blocks, so it must be called off the main thread.</p>
+     *
+     * @return the build, or null when Modrinth does not know the file
+     */
+    public ModrinthVersion identified(InstalledJar jar) {
+
+        try {
+            return catalog.getModrinth().identify(List.of(jar.sha512())).join().get(jar.sha512());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public List<ModrinthVersion> compatibleOrEmpty(String projectId) {
 
         try {

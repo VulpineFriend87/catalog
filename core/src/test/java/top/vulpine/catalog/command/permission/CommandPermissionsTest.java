@@ -57,7 +57,7 @@ class CommandPermissionsTest {
 
         for (String sub : Set.of("list", "info", "search", "install", "versions", "reload",
                 "settings", "auto", "soak", "channel", "update", "history", "cancel", "uninstall",
-                "dependencies", "trash", "untrack", "track", "hold", "unhold")) {
+                "trash", "untrack", "track", "hold", "unhold", "network", "servers", "switch")) {
             assertTrue(PERMISSIONS.nodeFor("/catalog " + sub) != null
                     && !PERMISSIONS.nodeFor("/catalog " + sub).equals(CommandPermissions.ANY), sub);
         }

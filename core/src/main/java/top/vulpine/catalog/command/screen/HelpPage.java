@@ -67,6 +67,7 @@ public final class HelpPage {
                     new Entry("track", "<jar>", "Manage a plugin again")),
             List.of(
                     new Entry("network", "", "Servers on the network"),
+                    new Entry("servers", "<plugin>", "Where a plugin is installed"),
                     new Entry("switch", "[list|history|trash]", "Open a screen on another server"),
                     new Entry("reload", "", "Reload the configuration")));
 
