@@ -1,6 +1,7 @@
 <a href="https://modrinth.com/plugin/catalog"><img alt="Available on Modrinth" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/modrinth_vector.svg"></a>
 <img alt="Works on Paper 1.18.2+" height="56" src="https://u.vulpine.top/u/AIB6AM.svg">
 <img alt="Requires Java 17+" height="56" src="https://u.vulpine.top/u/ggP6Ta.svg">
+<a href="https://getcatalog.dev"><img alt="Visit our website" height="56" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/website_vector.svg"></a>
 
 Catalog analyses your plugins folder once the server boots, figuring out which Modrinth plugin each `.jar` belongs to. Every jar is identified by its hash, so a renamed file is still recognized and nothing has to be mapped by hand. Then you will get your updates in chat and be able to search, install and remove plugins with a click. Every plugin that Catalog does not recognize is left untouched.
 
