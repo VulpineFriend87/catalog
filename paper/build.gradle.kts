@@ -17,7 +17,10 @@ dependencies {
     implementation(libs.folialib)
     implementation(libs.commons)
     implementation(libs.lamp.common)
-    library(libs.jedis)
+    implementation(libs.jedis) {
+        exclude(group = "org.slf4j")
+        exclude(group = "com.google.code.gson")
+    }
     implementation(libs.lamp.bukkit)
 
     compileOnly(libs.paper)
@@ -46,6 +49,9 @@ tasks {
         shade("com.tcoded.folialib", "folialib")
         shade("top.vulpine.commons", "commons")
         shade("revxrsal.commands", "lamp")
+        shade("redis.clients", "redis")
+        shade("org.apache.commons.pool2", "pool2")
+        shade("org.json", "json")
     }
 
     build {
